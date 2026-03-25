@@ -1,22 +1,30 @@
 services:
   redis:
-    image: redis:latest
+    image: redis:7.4-alpine
     container_name: redis
+    restart: always
+
     ports:
       - "6379:6379"
-
-    healthcheck:
-      test: [ "CMD-SHELL", "redis-cli ping | grep PONG" ]
-      interval: 1s
-      timeout: 3s
-      retries: 5
-    command: [ "redis-server" ]
 
     networks:
       - app-network
 
+    volumes:
+      - ./redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - cache:/data
+
+    env_file:
+      - .env
+
+    healthcheck:
+      test: [ "CMD-SHELL", "redis-cli -a $$REDIS_PASSWORD ping | grep -q PONG" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   redis-insight:
-    image: redis/redisinsight:latest
+    image: redis/redisinsight:2.62
     restart: always
     ports:
       - "5540:5540"
@@ -24,15 +32,21 @@ services:
     networks:
       - app-network
 
+    environment:
+      - RI_ENCRYPTION_KEY=${RI_ENCRYPTION_KEY}
+
     volumes:
       - redis-insight:/data
 
     depends_on:
-      - redis
-
+      redis:
+        condition: service_healthy
 
 networks:
   app-network:
 
 volumes:
   redis-insight:
+    driver: local
+  cache:
+    driver: local
