@@ -1,0 +1,38 @@
+services:
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6379:6379"
+
+    healthcheck:
+      test: [ "CMD-SHELL", "redis-cli ping | grep PONG" ]
+      interval: 1s
+      timeout: 3s
+      retries: 5
+    command: [ "redis-server" ]
+
+    networks:
+      - app-network
+
+  redis-insight:
+    image: redis/redisinsight:latest
+    restart: always
+    ports:
+      - "5540:5540"
+
+    networks:
+      - app-network
+
+    volumes:
+      - redis-insight:/data
+
+    depends_on:
+      - redis
+
+
+networks:
+  app-network:
+
+volumes:
+  redis-insight:
