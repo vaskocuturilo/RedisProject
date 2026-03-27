@@ -1,0 +1,167 @@
+openapi: 3.0.3
+info:
+  title: Redis User & Event API
+  version: "1.0.0"
+  description: REST API для управления пользователями и учебными событиями
+
+paths:
+  /api/v1/users:
+    post:
+      summary: Создать пользователя
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserDto"
+      responses:
+        '200':
+          description: Успешно создано
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserDto"
+
+  /api/v1/users/{id}:
+    get:
+      summary: Получить пользователя по ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Найдено
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserDto"
+        '404':
+          description: Не найдено
+    put:
+      summary: Обновить пользователя
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserDto"
+      responses:
+        '200':
+          description: Обновлено
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserDto"
+    delete:
+      summary: Удалить пользователя
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Удалено
+
+  /api/v1/events:
+    post:
+      summary: Создать событие
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EventDto"
+      responses:
+        '200':
+          description: Успешно создано
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventDto"
+
+  /api/v1/events/{id}:
+    get:
+      summary: Получить событие по ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Найдено
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventDto"
+        '404':
+          description: Не найдено
+    put:
+      summary: Обновить событие
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EventDto"
+      responses:
+        '200':
+          description: Обновлено
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventDto"
+    delete:
+      summary: Удалить событие
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Удалено
+
+components:
+  schemas:
+    UserDto:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        age:
+          type: integer
+        events:
+          type: array
+          items:
+            type: string
+    EventDto:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
