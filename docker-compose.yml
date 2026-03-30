@@ -1,4 +1,21 @@
 services:
+  postgres:
+    image: postgres:17-alpine3.23
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+    networks:
+      - app-network
+
   redis:
     image: redis:7.4-alpine
     container_name: redis
@@ -47,6 +64,8 @@ networks:
 
 volumes:
   redis-insight:
+    driver: local
+  pgdata:
     driver: local
   cache:
     driver: local

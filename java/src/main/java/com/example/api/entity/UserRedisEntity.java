@@ -11,7 +11,7 @@ import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
 
-@RedisHash("User")
+@RedisHash(value = "User", timeToLive = 3600L)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

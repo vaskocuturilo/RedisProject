@@ -1,6 +1,7 @@
 package com.example.api.service;
 
 import com.example.api.dto.UserDto;
+import com.example.api.entity.UserJpaEntity;
 import com.example.api.entity.UserRedisEntity;
 import com.example.api.mapper.UserMapper;
 import com.example.api.repository.UserJpaRepository;
@@ -26,7 +27,10 @@ public class UserService {
 
     public UserDto create(final UserDto dto) {
         final UserDto userDto = new UserDto(UUID.randomUUID().toString(), dto.name(), dto.age(), dto.events());
-        final UserRedisEntity savedUser = userRedisRepository.save(userMapper.toEntity(userDto));
+        final UserJpaEntity savedUser = userJpaRepository.save(userMapper.toJpaEntity(userDto));
+
+        userRedisRepository.save(userMapper.toRedisEntity(userDto));
+
         log.info("IN create - saved user: {}", savedUser);
 
         return userMapper.toDto(savedUser);
@@ -41,7 +45,7 @@ public class UserService {
     }
 
     public UserDto update(final String id, final UserDto dto) {
-        final UserRedisEntity entity = userMapper.toEntity(dto);
+        final UserRedisEntity entity = userMapper.toRedisEntity(dto);
 
         entity.setId(id);
 

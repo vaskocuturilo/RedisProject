@@ -4,6 +4,8 @@ import com.example.api.dto.EventDto;
 import com.example.api.service.EventService;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/events")
 public class EventControllerV1 {
@@ -23,6 +25,10 @@ public class EventControllerV1 {
     @PutMapping("/{id}")
     public EventDto update(@PathVariable String id, @RequestBody EventDto eventDto) {
         return eventService.update(id, eventDto);
+    }
+
+    @GetMapping
+    public List<EventDto> getAll() {return eventService.getAll();
     }
 
     @GetMapping("/{id}")
