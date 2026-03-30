@@ -9,7 +9,7 @@ import org.springframework.data.redis.core.RedisHash;
 
 import java.io.Serializable;
 
-@RedisHash("Event")
+@RedisHash(value = "Event", timeToLive = 3600L)
 @Data
 @AllArgsConstructor
 @NoArgsConstructor

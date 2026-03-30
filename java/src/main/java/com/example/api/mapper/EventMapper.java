@@ -9,7 +9,7 @@ import org.mapstruct.MappingConstants;
 @Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
 public interface EventMapper {
 
-
+    //Redis
     EventDto toDto(EventRedisEntity eventRedisEntity);
 
     EventRedisEntity toRedisEntity(EventDto eventDto);
