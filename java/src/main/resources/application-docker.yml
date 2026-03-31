@@ -10,6 +10,7 @@ spring:
     redis:
       host: ${REDIS_HOST:redis}
       port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:test1}
 
   datasource:
     url: jdbc:postgresql://localhost/${POSTGRES_DB}
