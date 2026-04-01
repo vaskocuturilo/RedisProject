@@ -48,7 +48,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(RateLimitExceededException.class)
-    @ResponseStatus(HttpStatus.TOO_MANY_REQUESTS)  // 429
+    @ResponseStatus(HttpStatus.TOO_MANY_REQUESTS)
     public Map<String, String> handleRateLimit(RateLimitExceededException ex) {
         return Map.of(
                 "error", "Too Many Requests",

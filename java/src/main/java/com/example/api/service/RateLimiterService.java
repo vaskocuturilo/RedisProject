@@ -1,30 +1,50 @@
 package com.example.api.service;
 
+import io.lettuce.core.RedisException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RateLimiterService {
     private final StringRedisTemplate redisTemplate;
 
+    private static final RedisScript<Long> RATE_LIMIT_SCRIPT = RedisScript.of(
+            """
+                    local count = redis.call('INCR', KEYS[1])
+                    if count == 1 then
+                        redis.call('EXPIRE', KEYS[1], ARGV[1])
+                    end
+                    return count
+                    """,
+            Long.class
+    );
+
 
     public boolean isAllowed(final String key, int limit, int durationSeconds) {
-        final String redisKey = "rate_limit:" + key;
+        String redisKey = "rate_limit:" + key;
 
-        final Long count = redisTemplate.opsForValue().increment(key);
+        try {
+            long count = Objects.requireNonNullElse(
+                    redisTemplate.execute(
+                            RATE_LIMIT_SCRIPT,
+                            Collections.singletonList(redisKey),
+                            String.valueOf(durationSeconds)
+                    ),
+                    0L
+            );
+            return count <= limit;
 
-        if (Objects.isNull(count)) {
+        } catch (RedisException ex) {
+            log.warn("Redis unavailable during rate limiting, failing open: {}", ex.getMessage());
             return true;
         }
-
-        if (count == 1) {
-            redisTemplate.expire(redisKey, durationSeconds, TimeUnit.SECONDS);
-        }
-        return count <= limit;
     }
 }
