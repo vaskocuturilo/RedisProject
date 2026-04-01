@@ -66,7 +66,7 @@ public class EventService {
 
         log.info("Cache miss for all Events, loading from Postgres");
 
-        List<EventJpaEntity> entities = (List<EventJpaEntity>) eventJpaRepository.findAll();
+        List<EventJpaEntity> entities = eventJpaRepository.findAll();
 
         if (entities.isEmpty()) {
             return Collections.emptyList();

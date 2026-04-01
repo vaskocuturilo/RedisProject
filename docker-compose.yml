@@ -75,6 +75,8 @@ services:
     env_file:
       - .env
 
+
+
 networks:
   app-network:
     driver: bridge
@@ -85,4 +87,6 @@ volumes:
   pgdata:
     driver: local
   cache:
+    driver: local
+  logs:
     driver: local
