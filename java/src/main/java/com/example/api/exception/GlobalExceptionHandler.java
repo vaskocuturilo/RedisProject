@@ -56,6 +56,15 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(LockAcquisitionException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public Map<String, String> handleLockAcquisition(LockAcquisitionException ex) {
+        return Map.of(
+                "error", "Resource Locked",
+                KEY, ex.getMessage()
+        );
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleGeneric(Exception ex) {
         return ResponseEntity
