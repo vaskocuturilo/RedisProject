@@ -20,6 +20,9 @@ spring:
   flyway:
     enabled: true
 
+
+  cache:
+    type: redis
   data:
     redis:
       host: localhost

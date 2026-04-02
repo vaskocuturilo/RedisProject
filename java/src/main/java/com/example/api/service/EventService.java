@@ -26,13 +26,25 @@ public class EventService {
     private final EventJpaRepository eventJpaRepository;
 
     public EventDto create(final EventDto dto) {
+        log.info("try to create - event: {}", dto);
+
         final EventDto eventDto = new EventDto(UUID.randomUUID().toString(), dto.title(), dto.description());
 
+        log.info("The event created - event: {}", eventDto);
+
+
+        log.info("Try to save the - event: {}", eventDto);
         final EventJpaEntity savedEntity = eventJpaRepository.save(eventMapper.toJpaEntity(eventDto));
+
+        log.info("The event saved - event: {}", eventDto);
+
+        log.info("Try to send event to Redis - event: {}", eventDto);
 
         eventRedisRepository.save(eventMapper.toRedisEntity(eventDto));
 
-        log.info("IN create - saved user: {}", savedEntity);
+        log.info("The event sent to Redis - event: {}", eventDto);
+
+        log.info("IN create - saved event: {}", savedEntity);
 
         return eventMapper.toDto(savedEntity);
     }
