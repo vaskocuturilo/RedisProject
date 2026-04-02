@@ -19,6 +19,8 @@ spring:
   flyway:
     enabled: true
 
+  cache:
+    type: redis
   data:
     redis:
       host: ${REDIS_HOST}
@@ -30,7 +32,10 @@ logging:
   level:
     root: DEBUG
     org.hibernate: ERROR
-    org.springframework: DEBUG
+    org.springframework.data.*.*: TRACE
+    org.springframework.cache.*.*: TRACE
+    org.springframework.web.*.*: TRACE
+    org.apache: TRACE
     com.example.api: WARN
     com.zaxxer.hikari: INFO
 
