@@ -10,6 +10,6 @@ FROM eclipse-temurin:24-jdk-alpine
 
 WORKDIR /app
 
-COPY --from=builder /app/build/libs/*.jar app.jar
+COPY --from=builder /app/build/libs/api-1.0.0.jar app.jar
 
 ENTRYPOINT ["java", "-jar","-Dspring.profiles.active=docker", "app.jar"]
