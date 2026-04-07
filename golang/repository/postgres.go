@@ -1,0 +1,57 @@
+package repository
+
+import (
+	"context"
+	"database/sql"
+	"errors"
+	"golang/domain"
+)
+
+type PostgresEventRepository struct {
+	db *sql.DB
+}
+
+func NewPostgresEventRepository(db *sql.DB) *PostgresEventRepository {
+	return &PostgresEventRepository{db: db}
+}
+
+func (r *PostgresEventRepository) Create(ctx context.Context, event *domain.Event) error {
+	query := `
+        INSERT INTO events (id, title, description)
+        VALUES ($1, $2, $3)
+    `
+	_, err := r.db.ExecContext(ctx, query,
+		event.ID, event.Title, event.Description)
+	return err
+}
+
+func (r *PostgresEventRepository) FindByID(ctx context.Context, id string) (*domain.Event, error) {
+	query := `SELECT id, title, description 
+              FROM events WHERE id = $1`
+
+	event := &domain.Event{}
+	err := r.db.QueryRowContext(ctx, query, id).Scan(
+		&event.ID, &event.Title, &event.Description)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, domain.ErrNotFound
+	}
+	return event, err
+}
+
+func (r *PostgresEventRepository) FindAll(ctx context.Context) ([]*domain.Event, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (r *PostgresEventRepository) Update(ctx context.Context, event *domain.Event) error {
+	query := `UPDATE events SET title=$2, description=$3 WHERE id=$1`
+	_, err := r.db.ExecContext(ctx, query, event.ID, event.Title, event.Description)
+	return err
+}
+
+func (r *PostgresEventRepository) Delete(ctx context.Context, id string) error {
+	query := `DELETE FROM events WHERE id = $1`
+	_, err := r.db.ExecContext(ctx, query, id)
+	return err
+}
