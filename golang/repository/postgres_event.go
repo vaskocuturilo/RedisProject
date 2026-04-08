@@ -25,7 +25,7 @@ func (r *PostgresEventRepository) Create(ctx context.Context, event *domain.Even
 	return err
 }
 
-func (r *PostgresEventRepository) FindByID(ctx context.Context, id string) (*domain.Event, error) {
+func (r *PostgresEventRepository) Get(ctx context.Context, id string) (*domain.Event, error) {
 	query := `SELECT id, title, description 
               FROM events WHERE id = $1`
 
@@ -39,7 +39,7 @@ func (r *PostgresEventRepository) FindByID(ctx context.Context, id string) (*dom
 	return event, err
 }
 
-func (r *PostgresEventRepository) FindAll(ctx context.Context) ([]*domain.Event, error) {
+func (r *PostgresEventRepository) GetAll(ctx context.Context) ([]*domain.Event, error) {
 	//TODO implement me
 	panic("implement me")
 }
