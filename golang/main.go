@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -10,9 +11,11 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -42,7 +45,30 @@ func main() {
 		}
 	}(db)
 
-	repo := repository.NewPostgresEventRepository(db)
+	redisAddr := os.Getenv("REDIS_ADDR")
+
+	if redisAddr == "" {
+		redisAddr = "localhost:6379"
+	}
+
+	redisPassword := os.Getenv("REDIS_PASSWORD")
+
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     redisAddr,
+		Password: redisPassword,
+		DB:       0,
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := rdb.Ping(ctx).Err(); err != nil {
+		log.Fatalf("Failed to connect to Redis: %v", err)
+	}
+
+	pgRepo := repository.NewPostgresEventRepository(db)
+
+	repo := repository.NewCachedEventRepository(pgRepo, rdb, time.Minute*10)
 
 	serv := service.NewEventService(repo)
 

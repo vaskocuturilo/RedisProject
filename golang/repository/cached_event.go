@@ -1,0 +1,93 @@
+package repository
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"golang/domain"
+	"time"
+
+	"github.com/redis/go-redis/v9"
+)
+
+const eventString = "event:%s"
+
+type CachedEventRepository struct {
+	repo  EventRepository
+	cache *redis.Client
+	ttl   time.Duration
+}
+
+func NewCachedEventRepository(repo EventRepository, cache *redis.Client, ttl time.Duration) *CachedEventRepository {
+	return &CachedEventRepository{
+		repo:  repo,
+		cache: cache,
+		ttl:   ttl,
+	}
+}
+
+func (c *CachedEventRepository) Create(ctx context.Context, event *domain.Event) error {
+	key := fmt.Sprintf(eventString, event.ID)
+
+	err := c.repo.Create(ctx, event)
+
+	if err != nil {
+		return err
+	}
+
+	data, _ := json.Marshal(event)
+
+	c.cache.Set(ctx, key, data, c.ttl)
+
+	return err
+}
+
+func (c *CachedEventRepository) Get(ctx context.Context, id string) (*domain.Event, error) {
+	key := fmt.Sprintf(eventString, id)
+
+	val, err := c.cache.Get(ctx, key).Result()
+	if err == nil {
+		var event domain.Event
+		if err := json.Unmarshal([]byte(val), &event); err == nil {
+			return &event, nil
+		}
+	}
+
+	event, err := c.repo.Get(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	data, _ := json.Marshal(event)
+	c.cache.Set(ctx, key, data, c.ttl)
+
+	return event, nil
+}
+
+func (c *CachedEventRepository) GetAll(ctx context.Context) ([]*domain.Event, error) {
+	return c.repo.GetAll(ctx)
+}
+
+func (c *CachedEventRepository) Update(ctx context.Context, event *domain.Event) error {
+	key := fmt.Sprintf(eventString, event.ID)
+
+	err := c.repo.Update(ctx, event)
+
+	if err != nil {
+		return err
+	}
+
+	return c.cache.Del(ctx, key).Err()
+}
+
+func (c *CachedEventRepository) Delete(ctx context.Context, id string) error {
+	key := fmt.Sprintf(eventString, id)
+
+	err := c.repo.Delete(ctx, id)
+
+	if err != nil {
+		return err
+	}
+
+	return c.cache.Del(ctx, key).Err()
+}

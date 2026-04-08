@@ -21,11 +21,11 @@ func (s *EventService) Create(ctx context.Context, event *domain.Event) error {
 	return s.repo.Create(ctx, event)
 }
 
-func (s *EventService) GetEvent(ctx context.Context, id string) (*domain.Event, error) {
-	return s.repo.FindByID(ctx, id)
+func (s *EventService) Get(ctx context.Context, id string) (*domain.Event, error) {
+	return s.repo.Get(ctx, id)
 }
 
-func (s *EventService) Get(ctx context.Context) ([]*domain.Event, error) {
+func (s *EventService) GetAll(ctx context.Context) ([]*domain.Event, error) {
 	//TODO implement me
 	return nil, nil
 }

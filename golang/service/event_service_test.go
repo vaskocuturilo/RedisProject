@@ -7,11 +7,11 @@ import (
 )
 
 type MockRepository struct {
-	CreateFunc   func(ctx context.Context, event *domain.Event) error
-	FindByIDFunc func(ctx context.Context, id string) (*domain.Event, error)
-	FindAllFunc  func(ctx context.Context) ([]*domain.Event, error)
-	UpdateFunc   func(ctx context.Context, event *domain.Event) error
-	DeleteFunc   func(ctx context.Context, id string) error
+	CreateFunc func(ctx context.Context, event *domain.Event) error
+	GetFunc    func(ctx context.Context, id string) (*domain.Event, error)
+	GetAllFunc func(ctx context.Context) ([]*domain.Event, error)
+	UpdateFunc func(ctx context.Context, event *domain.Event) error
+	DeleteFunc func(ctx context.Context, id string) error
 }
 
 func (m *MockRepository) Create(ctx context.Context, event *domain.Event) error {
@@ -21,10 +21,10 @@ func (m *MockRepository) Create(ctx context.Context, event *domain.Event) error 
 	return nil
 }
 
-func (m *MockRepository) FindByID(ctx context.Context, id string) (*domain.Event, error) {
+func (m *MockRepository) Get(ctx context.Context, id string) (*domain.Event, error) {
 	return nil, nil
 }
-func (m *MockRepository) FindAll(ctx context.Context) ([]*domain.Event, error)  { return nil, nil }
+func (m *MockRepository) GetAll(ctx context.Context) ([]*domain.Event, error)   { return nil, nil }
 func (m *MockRepository) Update(ctx context.Context, event *domain.Event) error { return nil }
 func (m *MockRepository) Delete(ctx context.Context, id string) error           { return nil }
 

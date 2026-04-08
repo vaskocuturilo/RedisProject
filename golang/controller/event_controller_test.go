@@ -12,11 +12,11 @@ import (
 )
 
 type MockEventService struct {
-	CreateFunc   func(ctx context.Context, event *domain.Event) error
-	GetEventFunc func(ctx context.Context, id string) (*domain.Event, error)
-	GetFunc      func(ctx context.Context) ([]*domain.Event, error)
-	UpdateFunc   func(ctx context.Context, event *domain.Event) error
-	DeleteFunc   func(ctx context.Context, id string) error
+	CreateFunc func(ctx context.Context, event *domain.Event) error
+	GetFunc    func(ctx context.Context, id string) (*domain.Event, error)
+	GetAllFunc func(ctx context.Context) ([]*domain.Event, error)
+	UpdateFunc func(ctx context.Context, event *domain.Event) error
+	DeleteFunc func(ctx context.Context, id string) error
 }
 
 func (m *MockEventService) Create(ctx context.Context, event *domain.Event) error {
@@ -26,16 +26,16 @@ func (m *MockEventService) Create(ctx context.Context, event *domain.Event) erro
 	return nil
 }
 
-func (m *MockEventService) GetEvent(ctx context.Context, id string) (*domain.Event, error) {
-	if m.GetEventFunc != nil {
-		return m.GetEventFunc(ctx, id)
+func (m *MockEventService) Get(ctx context.Context, id string) (*domain.Event, error) {
+	if m.GetFunc != nil {
+		return m.GetFunc(ctx, id)
 	}
 	return nil, nil
 }
 
-func (m *MockEventService) Get(ctx context.Context) ([]*domain.Event, error) {
-	if m.GetFunc != nil {
-		return m.GetFunc(ctx)
+func (m *MockEventService) GetAll(ctx context.Context) ([]*domain.Event, error) {
+	if m.GetAllFunc != nil {
+		return m.GetAllFunc(ctx)
 	}
 	return nil, nil
 }

@@ -18,6 +18,10 @@ func NewEventController(service service.IEventService) *EventController {
 }
 
 func (c *EventController) Create(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+
 	var event *domain.Event
 
 	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
