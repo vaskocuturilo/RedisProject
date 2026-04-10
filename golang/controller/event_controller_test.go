@@ -73,8 +73,8 @@ func TestEventController_Create_Success(t *testing.T) {
 	ctrl.Create(rec, req)
 
 	// Assert
-	if rec.Code != http.StatusOK {
-		t.Errorf("Expected status 200, but got %d", rec.Code)
+	if rec.Code != http.StatusCreated {
+		t.Errorf("Expected status 201, but got %d", rec.Code)
 	}
 }
 

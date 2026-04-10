@@ -6,69 +6,66 @@ import (
 	"errors"
 	"fmt"
 	"golang/controller"
+	"golang/migrations"
 	"golang/repository"
 	"golang/service"
+	"golang/utils"
 	"log"
 	"net/http"
-	"os"
 	"time"
 
-	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/redis/go-redis/v9"
 )
 
 func main() {
-	err := godotenv.Load("../.env")
-	if err != nil {
-		log.Fatalf("Error loading .env file")
-	}
 
-	host := os.Getenv("POSTGRES_HOST")
-	port := os.Getenv("POSTGRES_PORT")
-	databaseUserName := os.Getenv("POSTGRES_USER")
-	databasePassword := os.Getenv("POSTGRES_PASSWORD")
-	database := os.Getenv("POSTGRES_DB")
+	postgresCredential := utils.GetEnvFromFile()
 
-	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s "+"password=%s dbname=%s sslmode=disable", host, port, databaseUserName, databasePassword, database)
+	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s "+"password=%s dbname=%s sslmode=disable",
+		postgresCredential.Host,
+		postgresCredential.Port,
+		postgresCredential.UserName,
+		postgresCredential.Password,
+		postgresCredential.Database)
 
 	db, err := sql.Open("postgres", psqlInfo)
-
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	defer func(db *sql.DB) {
 		err := db.Close()
 		if err != nil {
-			log.Fatalf("Failed to init Postgres: %v", err)
+			log.Printf("Failed to init Postgres: %v", err)
 		}
 	}(db)
-
-	redisAddr := os.Getenv("REDIS_ADDR")
-
-	if redisAddr == "" {
-		redisAddr = "localhost:6379"
-	}
-
-	redisPassword := os.Getenv("REDIS_PASSWORD")
-
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     redisAddr,
-		Password: redisPassword,
-		DB:       0,
-	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	if err := rdb.Ping(ctx).Err(); err != nil {
+	if err := db.Ping(); err != nil {
+		log.Fatalf("Postgres is not ready: %v", err)
+	}
+
+	err = migrations.RunMigrations(db)
+
+	if err != nil {
+		log.Fatalf("Failed to init migration process: %v", err)
+	}
+
+	redisConfig := utils.LoadRedisConfig()
+
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:     redisConfig.Addr,
+		Password: redisConfig.Password,
+		DB:       0,
+	})
+
+	if err := redisClient.Ping(ctx).Err(); err != nil {
 		log.Fatalf("Failed to connect to Redis: %v", err)
 	}
 
 	pgRepo := repository.NewPostgresEventRepository(db)
 
-	repo := repository.NewCachedEventRepository(pgRepo, rdb, time.Minute*10)
+	repo := repository.NewCachedEventRepository(pgRepo, redisClient, time.Minute*10)
 
 	serv := service.NewEventService(repo)
 
