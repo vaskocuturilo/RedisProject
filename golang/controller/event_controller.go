@@ -3,6 +3,7 @@ package controller
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"golang/domain"
 	"golang/service"
 	"log"
@@ -32,7 +33,9 @@ func (c *EventController) Create(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	err := c.service.Create(ctx, event)
+	newEvent := domain.NewEvent(event.Title, event.Description)
+
+	err := c.service.Create(ctx, newEvent)
 
 	if err != nil {
 		switch {
@@ -46,4 +49,11 @@ func (c *EventController) Create(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Location", fmt.Sprintf("/events/%s", newEvent.ID))
+
+	w.WriteHeader(http.StatusCreated)
+
+	json.NewEncoder(w).Encode(newEvent)
 }

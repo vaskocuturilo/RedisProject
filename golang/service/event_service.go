@@ -26,16 +26,13 @@ func (s *EventService) Get(ctx context.Context, id string) (*domain.Event, error
 }
 
 func (s *EventService) GetAll(ctx context.Context) ([]*domain.Event, error) {
-	//TODO implement me
-	return nil, nil
+	return s.repo.GetAll(ctx)
 }
 
 func (s *EventService) Update(ctx context.Context, event *domain.Event) error {
-	//TODO implement me
-	return nil
+	return s.repo.Update(ctx, event)
 }
 
 func (s *EventService) Delete(ctx context.Context, id string) error {
-	//TODO implement me
-	return nil
+	return s.repo.Delete(ctx, id)
 }

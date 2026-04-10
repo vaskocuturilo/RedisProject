@@ -66,7 +66,15 @@ func (r *PostgresEventRepository) GetAll(ctx context.Context) ([]*domain.Event, 
 
 func (r *PostgresEventRepository) Update(ctx context.Context, event *domain.Event) error {
 	query := `UPDATE events SET title=$2, description=$3 WHERE id=$1`
-	_, err := r.db.ExecContext(ctx, query, event.ID, event.Title, event.Description)
+
+	res, err := r.db.ExecContext(ctx, query, event.ID, event.Title, event.Description)
+
+	rows, _ := res.RowsAffected()
+
+	if rows == 0 {
+		return domain.ErrNotFound
+	}
+
 	return err
 }
 

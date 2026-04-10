@@ -1,11 +1,23 @@
 package domain
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/google/uuid"
+)
 
 type Event struct {
 	ID          string `json:"id"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
+}
+
+func NewEvent(title, description string) *Event {
+	return &Event{
+		ID:          uuid.New().String(),
+		Title:       title,
+		Description: description,
+	}
 }
 
 var (
