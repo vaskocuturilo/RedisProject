@@ -24,15 +24,17 @@ var (
 	ErrNotFound      = errors.New("event not found")
 	ErrAlreadyExists = errors.New("event already exists")
 	ErrInvalidInput  = errors.New("invalid input data")
+	ErrTitleRequired = errors.New("title required")
+	ErrDescRequired  = errors.New("description required")
 )
 
 func (e *Event) Validate() error {
 	if e.Title == "" {
-		return errors.New("title required")
+		return ErrTitleRequired
 	}
 
 	if e.Description == "" {
-		return errors.New("description required")
+		return ErrDescRequired
 	}
 
 	return nil

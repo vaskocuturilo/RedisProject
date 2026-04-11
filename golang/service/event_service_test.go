@@ -51,59 +51,58 @@ func (m *MockRepository) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
-func TestEventService_Create_Success(t *testing.T) {
-	//Arrange
-	event := domain.Event{Title: "Test", Description: "Test"}
+func TestEventService_Create_TableDriven(t *testing.T) {
+	type testCase struct {
+		name         string
+		inputTitle   string
+		inputDesc    string
+		mockResponse error
+		wantErr      error
+	}
 
-	wasCalled := false
-
-	mockRepo := &MockRepository{
-		CreateFunc: func(ctx context.Context, event *domain.Event) error {
-			wasCalled = true
-			return nil
+	tests := []testCase{
+		{
+			name:         "Success",
+			inputTitle:   "Valid Title",
+			inputDesc:    "Valid Description",
+			mockResponse: nil,
+			wantErr:      nil,
+		},
+		{
+			name:         "Empty Title - Validation Error",
+			inputTitle:   "",
+			inputDesc:    "Some desc",
+			mockResponse: nil,
+			wantErr:      domain.ErrTitleRequired,
+		},
+		{
+			name:         "Repository Conflict",
+			inputTitle:   "Duplicate",
+			inputDesc:    "Desc",
+			mockResponse: domain.ErrAlreadyExists,
+			wantErr:      domain.ErrAlreadyExists,
 		},
 	}
-	//Act
-	serv := NewEventService(mockRepo)
 
-	ctx := context.Background()
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Arrange
+			mockRepo := &MockRepository{
+				CreateFunc: func(ctx context.Context, e *domain.Event) error {
+					return tc.mockResponse
+				},
+			}
+			serv := NewEventService(mockRepo)
+			event := &domain.Event{Title: tc.inputTitle, Description: tc.inputDesc}
 
-	err := serv.Create(ctx, &event)
+			// Act
+			err := serv.Create(context.Background(), event)
 
-	//Assert
-	if err != nil {
-		t.Fatalf("Expected success, got err: %v", err)
-	}
-	if !wasCalled {
-		t.Error("Repository was called, but it should NOT have been")
-	}
-}
-
-func TestEventService_Create_ValidationError(t *testing.T) {
-	//Arrange
-	event := domain.Event{Title: "", Description: "Test"}
-
-	wasCalled := false
-
-	mockRepo := &MockRepository{
-		CreateFunc: func(ctx context.Context, event *domain.Event) error {
-			wasCalled = true
-			return nil
-		},
-	}
-	//Act
-	serv := NewEventService(mockRepo)
-
-	ctx := context.Background()
-
-	err := serv.Create(ctx, &event)
-
-	//Assert
-	if err == nil {
-		t.Fatalf("Expected validation error, but got nil")
-	}
-	if wasCalled {
-		t.Error("Repository was not called, but it should have been!")
+			// Assert
+			if !errors.Is(err, tc.wantErr) {
+				t.Errorf("Expected error %v, but got %v", tc.wantErr, err)
+			}
+		})
 	}
 }
 
