@@ -4,12 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"golang/controller"
+	"golang/internal/config"
 	"golang/migrations"
 	"golang/repository"
 	"golang/service"
-	"golang/utils"
 	"log"
 	"net/http"
 	"time"
@@ -20,16 +19,9 @@ import (
 
 func main() {
 
-	postgresCredential := utils.GetEnvFromFile()
+	cfg := config.Load()
 
-	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s "+"password=%s dbname=%s sslmode=disable",
-		postgresCredential.Host,
-		postgresCredential.Port,
-		postgresCredential.UserName,
-		postgresCredential.Password,
-		postgresCredential.Database)
-
-	db, err := sql.Open("postgres", psqlInfo)
+	db, err := sql.Open("postgres", cfg.Postgres.ConnString())
 
 	defer func(db *sql.DB) {
 		err := db.Close()
@@ -51,11 +43,9 @@ func main() {
 		log.Fatalf("Failed to init migration process: %v", err)
 	}
 
-	redisConfig := utils.LoadRedisConfig()
-
 	redisClient := redis.NewClient(&redis.Options{
-		Addr:     redisConfig.Addr,
-		Password: redisConfig.Password,
+		Addr:     cfg.Redis.Addr,
+		Password: cfg.Redis.Password,
 		DB:       0,
 	})
 
@@ -65,7 +55,7 @@ func main() {
 
 	pgRepo := repository.NewPostgresEventRepository(db)
 
-	repo := repository.NewCachedEventRepository(pgRepo, redisClient, time.Minute*10)
+	repo := repository.NewCachedEventRepository(pgRepo, redisClient, cfg.Server.TTL)
 
 	serv := service.NewEventService(repo)
 
@@ -77,7 +67,8 @@ func main() {
 
 	srv := http.Server{Addr: "localhost:8080", Handler: mux}
 
-	fmt.Printf("Server running at http://localhost:8080\n")
+	log.Printf("Server starting on port %s", cfg.Server.Port)
+
 	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatalf("Server error: %v", err)
 	}
