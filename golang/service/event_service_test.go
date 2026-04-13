@@ -54,8 +54,8 @@ func (m *MockRepository) Delete(ctx context.Context, id string) error {
 func TestEventService_Create_TableDriven(t *testing.T) {
 	type testCase struct {
 		name         string
-		inputTitle   string
-		inputDesc    string
+		giveTitle    string
+		giveDesc     string
 		mockResponse error
 		wantErr      error
 	}
@@ -63,28 +63,29 @@ func TestEventService_Create_TableDriven(t *testing.T) {
 	tests := []testCase{
 		{
 			name:         "Success",
-			inputTitle:   "Valid Title",
-			inputDesc:    "Valid Description",
+			giveTitle:    "Valid Title",
+			giveDesc:     "Valid Description",
 			mockResponse: nil,
 			wantErr:      nil,
 		},
 		{
 			name:         "Empty Title - Validation Error",
-			inputTitle:   "",
-			inputDesc:    "Some desc",
+			giveTitle:    "",
+			giveDesc:     "Some desc",
 			mockResponse: nil,
 			wantErr:      domain.ErrTitleRequired,
 		},
 		{
 			name:         "Repository Conflict",
-			inputTitle:   "Duplicate",
-			inputDesc:    "Desc",
+			giveTitle:    "Duplicate",
+			giveDesc:     "Desc",
 			mockResponse: domain.ErrAlreadyExists,
 			wantErr:      domain.ErrAlreadyExists,
 		},
 	}
 
 	for _, tc := range tests {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			// Arrange
 			mockRepo := &MockRepository{
@@ -93,7 +94,7 @@ func TestEventService_Create_TableDriven(t *testing.T) {
 				},
 			}
 			serv := NewEventService(mockRepo)
-			event := &domain.Event{Title: tc.inputTitle, Description: tc.inputDesc}
+			event := &domain.Event{Title: tc.giveTitle, Description: tc.giveDesc}
 
 			// Act
 			err := serv.Create(context.Background(), event)
@@ -106,49 +107,68 @@ func TestEventService_Create_TableDriven(t *testing.T) {
 	}
 }
 
-func TestEventService_Get_Success(t *testing.T) {
-	//Arrange
-	event := domain.Event{ID: "1", Title: "Test", Description: "Test"}
+func TestEventService_Get_TableDriven(t *testing.T) {
+	type testCase struct {
+		name       string
+		giveID     string
+		wantReturn *domain.Event
+		mockErr    error
+		wantEvent  *domain.Event
+		wantErr    error
+	}
 
-	mockRepo := &MockRepository{
-		GetFunc: func(ctx context.Context, id string) (*domain.Event, error) {
-			return &event, nil
+	event := domain.Event{Title: "Test", Description: "Test"}
+
+	tests := []testCase{
+		{
+			name:       "Success",
+			giveID:     "1",
+			wantReturn: &event,
+			mockErr:    nil,
+			wantEvent:  &event,
+			wantErr:    nil,
+		},
+		{
+			name:       "Not Found",
+			giveID:     "2",
+			wantReturn: nil,
+			mockErr:    domain.ErrNotFound,
+			wantEvent:  nil,
+			wantErr:    domain.ErrNotFound,
 		},
 	}
-	//Act
-	serv := NewEventService(mockRepo)
 
-	ctx := context.Background()
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			// Arrange
+			mockRepo := &MockRepository{
+				GetFunc: func(ctx context.Context, id string) (*domain.Event, error) {
+					if id != tc.giveID {
+						t.Errorf("Mock expected ID %s, got %s", tc.giveID, id)
+					}
+					return tc.wantReturn, tc.mockErr
+				},
+			}
+			serv := NewEventService(mockRepo)
 
-	result, err := serv.Get(ctx, event.ID)
+			// Act
+			result, err := serv.Get(context.Background(), tc.giveID)
 
-	//Assert
-	if err != nil {
-		t.Fatalf("Expected success, got err: %v", err)
-	}
+			// Assert
+			if !errors.Is(err, tc.wantErr) {
+				t.Fatalf("Expected error %v, got %v", tc.wantErr, err)
+			}
 
-	if result.ID != event.ID {
-		t.Errorf("Expected ID result ID: %v is equal event ID: %v, got err: %v", result.ID, event.ID, err)
-	}
-}
-
-func TestEventService_Get_NotFound(t *testing.T) {
-	//Arrange
-	mockRepo := &MockRepository{
-		GetFunc: func(ctx context.Context, id string) (*domain.Event, error) {
-			return nil, domain.ErrNotFound
-		},
-	}
-	//Act
-	serv := NewEventService(mockRepo)
-
-	ctx := context.Background()
-
-	_, err := serv.Get(ctx, "2")
-
-	//Assert
-	if !errors.Is(err, domain.ErrNotFound) {
-		t.Errorf("Expected event not found error, but got nil")
+			if tc.wantEvent != nil {
+				if result == nil {
+					t.Fatal("Expected result event, but got nil")
+				}
+				if result.ID != tc.wantEvent.ID {
+					t.Errorf("Expected event ID %s, got %s", tc.wantEvent.ID, result.ID)
+				}
+			}
+		})
 	}
 }
 
@@ -181,95 +201,97 @@ func TestEventService_GetAll_Success(t *testing.T) {
 	}
 }
 
-func TestEventService_Update_Success(t *testing.T) {
-	//Arrange
+func TestEventService_Update_TableDriven(t *testing.T) {
+	type testCase struct {
+		name         string
+		wantResponse error
+		wantErr      error
+	}
+
 	event := domain.Event{ID: "1", Title: "Updated Test", Description: "Updated Description"}
 
-	mockRepo := &MockRepository{
-		UpdateFunc: func(ctx context.Context, event *domain.Event) error {
-			if event.ID != "1" {
-				t.Errorf("Expected id '1', got '%s'", event.ID)
-			}
-			return nil
+	tests := []testCase{
+		{
+			name:         "Success",
+			wantResponse: nil,
+			wantErr:      nil,
+		},
+		{
+			name:         "Not Found",
+			wantResponse: domain.ErrNotFound,
+			wantErr:      domain.ErrNotFound,
 		},
 	}
-	//Act
-	serv := NewEventService(mockRepo)
 
-	ctx := context.Background()
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			// Arrange
+			mockRepo := &MockRepository{
+				UpdateFunc: func(ctx context.Context, event *domain.Event) error {
+					if event.ID != "1" {
+						t.Errorf("Expected id '1', got '%s'", event.ID)
+					}
+					return tc.wantResponse
+				},
+			}
+			serv := NewEventService(mockRepo)
 
-	err := serv.Update(ctx, &event)
+			// Act
+			err := serv.Update(context.Background(), &event)
 
-	//Assert
-	if err != nil {
-		t.Fatalf("Expected success, got err: %v", err)
+			// Assert
+			if !errors.Is(err, tc.wantErr) {
+				t.Errorf("Expected error %v, but got %v", tc.wantErr, err)
+			}
+		})
 	}
 }
 
-func TestEventService_Update_NotFound(t *testing.T) {
-	//Arrange
-	event := domain.Event{ID: "", Title: "", Description: ""}
+func TestEventService_Delete_TableDriven(t *testing.T) {
+	type testCase struct {
+		name         string
+		giveID       string
+		wantResponse error
+		wantErr      error
+	}
 
-	mockRepo := &MockRepository{
-		UpdateFunc: func(ctx context.Context, event *domain.Event) error {
-			return domain.ErrNotFound
+	tests := []testCase{
+		{
+			name:         "Success",
+			giveID:       "1",
+			wantResponse: nil,
+			wantErr:      nil,
+		},
+		{
+			name:         "Not Found",
+			giveID:       "1",
+			wantResponse: domain.ErrNotFound,
+			wantErr:      domain.ErrNotFound,
 		},
 	}
-	//Act
-	serv := NewEventService(mockRepo)
 
-	ctx := context.Background()
-
-	err := serv.Update(ctx, &event)
-
-	//Assert
-	if !errors.Is(err, domain.ErrNotFound) {
-		t.Errorf("Expected event not found error, but got nil")
-	}
-}
-
-func TestEventService_Delete_Success(t *testing.T) {
-	//Arrange
-	mockRepo := &MockRepository{
-		DeleteFunc: func(ctx context.Context, id string) error {
-			if id != "1" {
-				t.Errorf("Expected id '1', got '%s'", id)
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			// Arrange
+			mockRepo := &MockRepository{
+				DeleteFunc: func(ctx context.Context, id string) error {
+					if id != tc.giveID {
+						t.Errorf("Expected id '1', got '%s'", id)
+					}
+					return tc.wantResponse
+				},
 			}
-			return nil
-		},
-	}
-	//Act
-	serv := NewEventService(mockRepo)
+			serv := NewEventService(mockRepo)
 
-	ctx := context.Background()
+			// Act
+			err := serv.Delete(context.Background(), tc.giveID)
 
-	err := serv.Delete(ctx, "1")
-
-	//Assert
-	if err != nil {
-		t.Fatalf("Expected success, got err: %v", err)
-	}
-}
-
-func TestEventService_Delete_NotFound(t *testing.T) {
-	//Arrange
-	mockRepo := &MockRepository{
-		DeleteFunc: func(ctx context.Context, id string) error {
-			if id != "1" {
-				t.Errorf("Expected id '1', got '%s'", id)
+			// Assert
+			if !errors.Is(err, tc.wantErr) {
+				t.Errorf("Expected error %v, but got %v", tc.wantErr, err)
 			}
-			return domain.ErrNotFound
-		},
-	}
-	//Act
-	serv := NewEventService(mockRepo)
-
-	ctx := context.Background()
-
-	err := serv.Delete(ctx, "1")
-
-	//Assert
-	if !errors.Is(err, domain.ErrNotFound) {
-		t.Errorf("Expected event not found error, but got nil")
+		})
 	}
 }
