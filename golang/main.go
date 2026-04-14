@@ -6,7 +6,6 @@ import (
 	"errors"
 	"golang/controller"
 	"golang/internal/config"
-	"golang/middleware"
 	"golang/migrations"
 	"golang/repository"
 	"golang/service"
@@ -64,7 +63,11 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	mux.Handle("/events", middleware.AllowMethod(http.MethodPost)(http.HandlerFunc(ctrl.Create)))
+	mux.HandleFunc("POST /events", ctrl.Create)
+	mux.HandleFunc("GET /events/{id}", ctrl.Get)
+	mux.HandleFunc("GET /events", ctrl.GetAll)
+	mux.HandleFunc("PUT /events/{id}", ctrl.Update)
+	mux.HandleFunc("DELETE /events/{id}", ctrl.Delete)
 
 	srv := http.Server{Addr: "localhost:8080", Handler: mux}
 
