@@ -42,12 +42,12 @@ func Load() *Config {
 			Host:     getEnv("POSTGRES_HOST", "localhost"),
 			Port:     getEnv("POSTGRES_PORT", "5432"),
 			User:     getEnv("POSTGRES_USER", "postgres"),
-			Password: os.Getenv("POSTGRES_PASSWORD"),
-			DBName:   getEnv("POSTGRES_DB", "events"),
+			Password: getEnv("POSTGRES_PASSWORD", ""),
+			DBName:   getEnv("POSTGRES_DB", "events_db"),
 		},
 		Redis: RedisConfig{
 			Addr:     net.JoinHostPort(getEnv("REDIS_HOST", "localhost"), getEnv("REDIS_PORT", "6379")),
-			Password: os.Getenv("REDIS_PASSWORD"),
+			Password: getEnv("REDIS_PASSWORD", ""),
 		},
 		Server: ServerConfig{
 			Port: getEnv("SERVER_PORT", "8080"),

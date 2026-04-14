@@ -20,7 +20,7 @@ func TestPostgresEventRepository_Create_Success(t *testing.T) {
 
 	event := &domain.Event{ID: "1", Title: "Title", Description: "Description"}
 
-	mock.ExpectExec(regexp.QuoteMeta("INSERT INTO events (id, title, description) VALUES ($1, $2, $3)")).
+	mock.ExpectExec(regexp.QuoteMeta("INSERT INTO events_db (id, title, description) VALUES ($1, $2, $3)")).
 		WithArgs(event.ID, event.Title, event.Description).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
@@ -38,7 +38,7 @@ func TestPostgresEventRepository_Update_Success(t *testing.T) {
 
 	event := &domain.Event{ID: "2", Title: "Title updated", Description: "Description updated"}
 
-	mock.ExpectExec(regexp.QuoteMeta("UPDATE events SET title=$2, description=$3 WHERE id=$1")).
+	mock.ExpectExec(regexp.QuoteMeta("UPDATE events_db SET title=$2, description=$3 WHERE id=$1")).
 		WithArgs(event.ID, event.Title, event.Description).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
@@ -89,7 +89,7 @@ func TestPostgresEventRepository_Get_Success(t *testing.T) {
 	rows := sqlmock.NewRows([]string{"id", "title", "description"}).
 		AddRow(id, "Test Title", "Test Description")
 
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, title, description FROM events WHERE id = $1")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, title, description FROM events_db WHERE id = $1")).
 		WithArgs(id).
 		WillReturnRows(rows)
 
