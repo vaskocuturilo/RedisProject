@@ -10,7 +10,11 @@ import (
 	"golang/repository"
 	"golang/service"
 	"log"
+	"net"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	_ "github.com/lib/pq"
@@ -69,11 +73,30 @@ func main() {
 	mux.HandleFunc("PUT /events/{id}", ctrl.Update)
 	mux.HandleFunc("DELETE /events/{id}", ctrl.Delete)
 
-	srv := http.Server{Addr: "localhost:8080", Handler: mux}
+	srv := http.Server{Addr: net.JoinHostPort(cfg.Server.Host, cfg.Server.Port), Handler: mux}
 
-	log.Printf("Server starting on port %s", cfg.Server.Port)
+	go func() {
+		log.Printf("Server is starting on port %s", cfg.Server.Port)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("Listen error: %v", err)
+		}
+	}()
 
-	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		log.Fatalf("Server error: %v", err)
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+
+	<-quit
+	log.Println("Shutdown signal received, shutting down gracefully...")
+
+	ctx, cancel = context.WithTimeout(context.Background(), cfg.Server.TTL)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatalf("Server forced to shutdown: %v", err)
 	}
+
+	log.Println("Closing database connections...")
+	db.Close()
+
+	log.Println("Server exited properly")
 }

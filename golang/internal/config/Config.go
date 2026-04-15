@@ -30,6 +30,7 @@ type RedisConfig struct {
 }
 
 type ServerConfig struct {
+	Host string
 	Port string
 	TTL  time.Duration
 }
@@ -42,14 +43,15 @@ func Load() *Config {
 			Host:     getEnv("POSTGRES_HOST", "localhost"),
 			Port:     getEnv("POSTGRES_PORT", "5432"),
 			User:     getEnv("POSTGRES_USER", "postgres"),
-			Password: getEnv("POSTGRES_PASSWORD", ""),
+			Password: os.Getenv("POSTGRES_PASSWORD"),
 			DBName:   getEnv("POSTGRES_DB", "events_db"),
 		},
 		Redis: RedisConfig{
 			Addr:     net.JoinHostPort(getEnv("REDIS_HOST", "localhost"), getEnv("REDIS_PORT", "6379")),
-			Password: getEnv("REDIS_PASSWORD", ""),
+			Password: os.Getenv("REDIS_PASSWORD"),
 		},
 		Server: ServerConfig{
+			Host: getEnv("SERVER_HOST", "localhost"),
 			Port: getEnv("SERVER_PORT", "8080"),
 			TTL:  time.Minute * 10,
 		},
