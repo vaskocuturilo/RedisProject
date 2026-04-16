@@ -1,5 +1,5 @@
 ## Build stage
-FROM golang:1.25-alpine3.21 AS builder
+FROM golang:1.25-alpine3.23 AS builder
 
 WORKDIR /app
 
@@ -9,7 +9,7 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -o main .
+RUN go build -ldflags="-s -w" -o main .
 
 ## Package stage
 FROM alpine:3.23.3
