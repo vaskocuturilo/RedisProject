@@ -3,9 +3,10 @@ package controller
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"golang/domain"
 	"golang/service"
-	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -13,12 +14,10 @@ import (
 
 const (
 	eventNotFound       = "Event not found"
-	notFound            = "Not found with ID: %v"
-	unexpected          = "Unexpected error: %v"
+	notFound            = "Not found with ID"
+	unexpected          = "Unexpected error"
 	invalidUrl          = "Invalid ID in URL"
 	internalServerError = "Internal server error"
-	contentType         = "Content-Type"
-	applicationJson     = "application/json"
 )
 
 type EventController struct {
@@ -33,13 +32,13 @@ func (c *EventController) Create(w http.ResponseWriter, r *http.Request) {
 	var event domain.Event
 
 	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
-		log.Printf("Decode payload error: %v", err)
+		slog.Info("Decode payload error", "error", err)
 		http.Error(w, "Failed to Decode payload", http.StatusBadRequest)
 		return
 	}
 
 	if err := event.Validate(); err != nil {
-		log.Printf("Ivalid Data: %v", err)
+		slog.Info("Invalid Data", "error", err)
 		http.Error(w, "Invalid Data", http.StatusBadRequest)
 		return
 	}
@@ -57,15 +56,15 @@ func (c *EventController) Create(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, domain.ErrAlreadyExists):
 			http.Error(w, "Event ID already taken", http.StatusConflict)
 		default:
-			log.Printf(unexpected, err)
+			slog.Error(unexpected, "error", err)
 			http.Error(w, internalServerError, http.StatusInternalServerError)
 		}
 		return
 	}
 
-	w.Header().Set(contentType, applicationJson)
+	http.CanonicalHeaderKey("Content-Type")
 	w.WriteHeader(http.StatusCreated)
-
+	w.Header().Set("Location", fmt.Sprintf("/events/%s", newEvent.ID))
 	json.NewEncoder(w).Encode(newEvent)
 }
 
@@ -77,7 +76,7 @@ func (c *EventController) Get(w http.ResponseWriter, r *http.Request) {
 	err := uuid.Validate(idFromPath)
 
 	if err := uuid.Validate(idFromPath); err != nil {
-		log.Printf("Ivalid ID: %v", err)
+		slog.Info("Invalid ID", "error", err)
 		http.Error(w, invalidUrl, http.StatusBadRequest)
 		return
 	}
@@ -87,15 +86,15 @@ func (c *EventController) Get(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrNotFound):
-			log.Printf(notFound, err)
+			slog.Info(notFound, "error", err)
 			http.Error(w, eventNotFound, http.StatusNotFound)
 		default:
-			log.Printf(unexpected, err)
+			slog.Info(unexpected, "error", err)
 			http.Error(w, internalServerError, http.StatusInternalServerError)
 		}
 		return
 	}
-	w.Header().Set(contentType, applicationJson)
+	http.CanonicalHeaderKey("Content-Type")
 	w.WriteHeader(http.StatusOK)
 
 	json.NewEncoder(w).Encode(result)
@@ -107,11 +106,11 @@ func (c *EventController) GetAll(w http.ResponseWriter, r *http.Request) {
 	result, err := c.service.GetAll(ctx)
 
 	if err != nil {
-		log.Printf(unexpected, err)
+		slog.Info(unexpected, "error", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set(contentType, applicationJson)
+	http.CanonicalHeaderKey("Content-Type")
 	w.WriteHeader(http.StatusOK)
 
 	json.NewEncoder(w).Encode(result)
@@ -121,7 +120,7 @@ func (c *EventController) Update(w http.ResponseWriter, r *http.Request) {
 	var updatedEvent domain.Event
 
 	if err := json.NewDecoder(r.Body).Decode(&updatedEvent); err != nil {
-		log.Printf("Decode payload error: %v", err)
+		slog.Info("Decode payload error", "error", err)
 		http.Error(w, "Failed to Decode payload", http.StatusBadRequest)
 		return
 	}
@@ -129,7 +128,7 @@ func (c *EventController) Update(w http.ResponseWriter, r *http.Request) {
 	idFromPath := r.PathValue("id")
 
 	if err := uuid.Validate(idFromPath); err != nil {
-		log.Printf("Ivalid ID: %v", err)
+		slog.Info("Invalid ID", "error", err)
 		http.Error(w, invalidUrl, http.StatusBadRequest)
 		return
 	}
@@ -138,7 +137,7 @@ func (c *EventController) Update(w http.ResponseWriter, r *http.Request) {
 
 	if err := c.service.Update(r.Context(), &updatedEvent); err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			log.Printf(notFound, err)
+			slog.Info(notFound, "error", err)
 			http.Error(w, eventNotFound, http.StatusNotFound)
 			return
 		}
@@ -146,7 +145,7 @@ func (c *EventController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set(contentType, applicationJson)
+	http.CanonicalHeaderKey("Content-Type")
 	w.WriteHeader(http.StatusOK)
 
 	json.NewEncoder(w).Encode(updatedEvent)
@@ -158,7 +157,7 @@ func (c *EventController) Delete(w http.ResponseWriter, r *http.Request) {
 	idFromPath := r.PathValue("id")
 
 	if err := uuid.Validate(idFromPath); err != nil {
-		log.Printf("Invalid ID in URL: %v", err)
+		slog.Info("Invalid ID in URL", "error", err)
 		http.Error(w, invalidUrl, http.StatusBadRequest)
 		return
 	}
@@ -168,15 +167,15 @@ func (c *EventController) Delete(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrNotFound):
-			log.Printf(notFound, err)
+			slog.Info(notFound, "error", err)
 			http.Error(w, eventNotFound, http.StatusNotFound)
 			return
 		default:
-			log.Printf(unexpected, err)
+			slog.Info(unexpected, "error", err)
 			http.Error(w, internalServerError, http.StatusInternalServerError)
 		}
 		return
 	}
-	w.Header().Set(contentType, applicationJson)
+	http.CanonicalHeaderKey("Content-Type")
 	w.WriteHeader(http.StatusNoContent)
 }

@@ -6,10 +6,11 @@ import (
 	"errors"
 	"golang/controller"
 	"golang/internal/config"
+	"golang/middleware"
 	"golang/migrations"
 	"golang/repository"
 	"golang/service"
-	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -25,12 +26,20 @@ func main() {
 
 	cfg := config.Load()
 
+	var handler slog.Handler
+
+	handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})
+
+	logger := slog.New(handler)
+
+	slog.SetDefault(logger)
+
 	db, err := sql.Open("postgres", cfg.Postgres.ConnString())
 
 	defer func(db *sql.DB) {
 		err := db.Close()
 		if err != nil {
-			log.Printf("Failed to init Postgres: %v", err)
+			slog.Warn("Failed to init Postgres: ", "error", err)
 		}
 	}(db)
 
@@ -38,13 +47,17 @@ func main() {
 	defer cancel()
 
 	if err := db.Ping(); err != nil {
-		log.Fatalf("Postgres is not ready: %v", err)
+		slog.Warn("Postgres is not ready: ", "error", err)
+	} else {
+		slog.Info("Postgres is ready")
 	}
 
 	err = migrations.RunMigrations(db)
 
 	if err != nil {
-		log.Fatalf("Failed to init migration process: %v", err)
+		slog.Warn("Failed to init migration process: ", "error", err)
+	} else {
+		slog.Info("Successfully init migration process")
 	}
 
 	redisClient := redis.NewClient(&redis.Options{
@@ -53,8 +66,10 @@ func main() {
 		DB:       0,
 	})
 
-	if err := redisClient.Ping(ctx).Err(); err != nil {
-		log.Fatalf("Failed to connect to Redis: %v", err)
+	if err := redisClient.Ping(context.Background()).Err(); err != nil {
+		slog.Warn("WARNING: Redis is not reachable, working without cache.", "error", err)
+	} else {
+		slog.Info("Successfully connected to Redis")
 	}
 
 	pgRepo := repository.NewPostgresEventRepository(db)
@@ -73,12 +88,14 @@ func main() {
 	mux.HandleFunc("PUT /events/{id}", ctrl.Update)
 	mux.HandleFunc("DELETE /events/{id}", ctrl.Delete)
 
-	srv := http.Server{Addr: net.JoinHostPort(cfg.Server.Host, cfg.Server.Port), Handler: mux}
+	wrappedMux := middleware.Logging(mux)
+
+	srv := http.Server{Addr: net.JoinHostPort(cfg.Server.Host, cfg.Server.Port), Handler: wrappedMux}
 
 	go func() {
-		log.Printf("Server is starting on port %s", cfg.Server.Port)
+		slog.Info("Server is starting on port", "port", cfg.Server.Port)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("Listen error: %v", err)
+			slog.Warn("Listen error", "error", err)
 		}
 	}()
 
@@ -86,17 +103,17 @@ func main() {
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 
 	<-quit
-	log.Println("Shutdown signal received, shutting down gracefully...")
+	slog.Info("Shutdown signal received, shutting down gracefully...")
 
 	ctx, cancel = context.WithTimeout(context.Background(), cfg.Server.TTL)
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatalf("Server forced to shutdown: %v", err)
+		slog.Warn("Server forced to shutdown: ", "error", err)
 	}
 
-	log.Println("Closing database connections...")
+	slog.Info("Closing database connections...")
 	db.Close()
 
-	log.Println("Server exited properly")
+	slog.Info("Server exited properly")
 }
