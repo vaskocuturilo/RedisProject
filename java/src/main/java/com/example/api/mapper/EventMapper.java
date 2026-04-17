@@ -4,9 +4,8 @@ import com.example.api.dto.EventDto;
 import com.example.api.entity.EventJpaEntity;
 import com.example.api.entity.EventRedisEntity;
 import org.mapstruct.Mapper;
-import org.mapstruct.MappingConstants;
 
-@Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
+@Mapper(componentModel = "spring")
 public interface EventMapper {
 
     //Redis

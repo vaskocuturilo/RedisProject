@@ -27,17 +27,21 @@ spring:
       port: ${REDIS_PORT}
       password: ${REDIS_PASSWORD}
 
+  config:
+    activate:
+      on-profile: docker
+
 #logging
 logging:
   level:
     root: DEBUG
-    org.hibernate: ERROR
-    org.springframework.data.*.*: TRACE
-    org.springframework.cache.*.*: TRACE
-    org.springframework.web.*.*: TRACE
-    org.apache: TRACE
-    com.example.api: WARN
-    com.zaxxer.hikari: INFO
+    org.hibernate: DEBUG
+    org.springframework.data.*.*: DEBUG
+    org.springframework.cache.*.*: DEBUG
+    org.springframework.web.*.*: DEBUG
+    org.apache: DEBUG
+    com.example.api: DEBUG
+    com.zaxxer.hikari: DEBUG
 
 management:
   observations:
