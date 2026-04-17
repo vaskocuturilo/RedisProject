@@ -32,7 +32,6 @@ public class EventService {
 
         log.info("The event created - event: {}", eventDto);
 
-
         log.info("Try to save the - event: {}", eventDto);
         final EventJpaEntity savedEntity = eventJpaRepository.save(eventMapper.toJpaEntity(eventDto));
 

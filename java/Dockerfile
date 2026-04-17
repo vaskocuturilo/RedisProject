@@ -1,4 +1,4 @@
-FROM gradle:jdk-21-and-24 AS builder
+FROM gradle:jdk24 AS builder
 
 WORKDIR /app
 
@@ -6,10 +6,10 @@ COPY --chown=gradle:gradle . .
 
 RUN gradle clean build -x test --no-daemon
 
-FROM eclipse-temurin:24-jdk-alpine
+FROM eclipse-temurin:24-jre-alpine
 
 WORKDIR /app
 
-COPY --from=builder /app/build/libs/api-1.0.0.jar app.jar
+COPY --from=builder /app/build/libs/*.jar app.jar
 
-ENTRYPOINT ["java", "-jar","-Dspring.profiles.active=docker", "app.jar"]
+ENTRYPOINT ["java", "-Dspring.profiles.active=docker", "-jar", "app.jar"]
