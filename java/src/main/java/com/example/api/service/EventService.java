@@ -12,9 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @Slf4j
@@ -26,26 +24,19 @@ public class EventService {
     private final EventJpaRepository eventJpaRepository;
 
     public EventDto create(final EventDto dto) {
-        log.info("try to create - event: {}", dto);
+        log.debug("Creating event: {}", dto);
 
         final EventDto eventDto = new EventDto(UUID.randomUUID().toString(), dto.title(), dto.description());
 
-        log.info("The event created - event: {}", eventDto);
-
-        log.info("Try to save the - event: {}", eventDto);
         final EventJpaEntity savedEntity = eventJpaRepository.save(eventMapper.toJpaEntity(eventDto));
 
-        log.info("The event saved - event: {}", eventDto);
+        final EventDto savedDto = eventMapper.toDto(savedEntity);
 
-        log.info("Try to send event to Redis - event: {}", eventDto);
+        eventRedisRepository.save(eventMapper.toRedisEntity(savedDto));
 
-        eventRedisRepository.save(eventMapper.toRedisEntity(eventDto));
+        log.info("Event created successfully id={}", savedEntity.getId());
 
-        log.info("The event sent to Redis - event: {}", eventDto);
-
-        log.info("IN create - saved event: {}", savedEntity);
-
-        return eventMapper.toDto(savedEntity);
+        return savedDto;
     }
 
     public EventDto get(final String id) {
@@ -102,6 +93,10 @@ public class EventService {
     public EventDto update(final String id, final EventDto dto) {
         log.info("Updating  Event id = {} in Postgres and Redis", id);
 
+        if (!eventJpaRepository.existsById(id)) {
+            throw new EntityNotFoundException("The event not found");
+        }
+
         final EventDto eventDto = new EventDto(id, dto.title(), dto.description());
 
         final EventJpaEntity updatedEntity = eventJpaRepository.save(eventMapper.toJpaEntity(eventDto));
@@ -113,6 +108,11 @@ public class EventService {
 
     public void delete(String id) {
         log.info("Deleting  Event id = {} in Postgres and Redis", id);
+
+        if (!eventJpaRepository.existsById(id)) {
+            throw new EntityNotFoundException("The event not found");
+        }
+
         eventRedisRepository.deleteById(id);
         eventJpaRepository.deleteById(id);
     }

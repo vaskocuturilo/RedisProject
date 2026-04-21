@@ -1,7 +1,9 @@
 package com.example.api.exception;
 
-import java.time.LocalDateTime;
+import lombok.Builder;
 
+import java.time.LocalDateTime;
+@Builder
 public record ErrorResponseDto
         (
                 String error,

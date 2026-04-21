@@ -27,12 +27,30 @@ public class DataUtils {
                 .build();
     }
 
-    public static EventDto getEventDtoTransient() {
+    public static EventDto getEvent1DtoTransient() {
         return EventDto
                 .builder()
                 .id(UUID.randomUUID().toString())
-                .title("Title Dto")
-                .description("Description Dto")
+                .title("Title Dto 1")
+                .description("Description Dto 1")
+                .build();
+    }
+
+    public static EventDto getEvent2DtoTransient() {
+        return EventDto
+                .builder()
+                .id(UUID.randomUUID().toString())
+                .title("Title Dto 2")
+                .description("Description Dto 2")
+                .build();
+    }
+
+    public static EventDto getEvent3DtoTransient() {
+        return EventDto
+                .builder()
+                .id(UUID.randomUUID().toString())
+                .title("Title Dto 3")
+                .description("Description Dto 3")
                 .build();
     }
 

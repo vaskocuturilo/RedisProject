@@ -20,8 +20,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.BDDMockito.then;
+import static org.mockito.BDDMockito.*;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 
@@ -44,12 +43,12 @@ class EventServiceTests {
     @DisplayName("Test event save functionality")
     void givenEventObject_whenSave_thenEventSaved() {
         // given
-        final EventDto inputDto = DataUtils.getEventDtoTransient();
+        final EventDto inputDto = DataUtils.getEvent1DtoTransient();
 
         final EventJpaEntity jpaEntity = DataUtils.getEventEntityTransient();
         final EventJpaEntity savedEntity = DataUtils.getEventEntityPersisted();
         final EventRedisEntity redisEntity = DataUtils.getEventRedisEntityTransient();
-        final EventDto expectedDto = DataUtils.getEventDtoTransient();
+        final EventDto expectedDto = DataUtils.getEvent1DtoTransient();
 
         given(eventMapper.toJpaEntity(any(EventDto.class))).willReturn(jpaEntity);
         given(eventJpaRepository.save(jpaEntity)).willReturn(savedEntity);
@@ -76,7 +75,7 @@ class EventServiceTests {
         // given
         final String id = "test-id";
         final EventRedisEntity redisEntity = DataUtils.getEventRedisEntityTransient();
-        final EventDto expectedDto = DataUtils.getEventDtoTransient();
+        final EventDto expectedDto = DataUtils.getEvent1DtoTransient();
 
         given(eventRedisRepository.findById(id)).willReturn(Optional.of(redisEntity));
         given(eventMapper.toDto(redisEntity)).willReturn(expectedDto);
@@ -101,7 +100,7 @@ class EventServiceTests {
         // given
         final String id = "test-id";
         final EventJpaEntity jpaEntity = DataUtils.getEventEntityPersisted();
-        final EventDto expectedDto = DataUtils.getEventDtoTransient();
+        final EventDto expectedDto = DataUtils.getEvent1DtoTransient();
         final EventRedisEntity redisEntity = DataUtils.getEventRedisEntityTransient();
 
         given(eventRedisRepository.findById(id)).willReturn(Optional.empty());
@@ -142,6 +141,95 @@ class EventServiceTests {
         then(eventJpaRepository).should(times(1)).findById(id);
         then(eventRedisRepository).should(never()).save(any());
         then(eventMapper).should(never()).toDto(any(EventJpaEntity.class));
+    }
+
+    @Test
+    @DisplayName("Test update event functionality - success")
+    void givenExistingEvent_whenUpdate_thenReturnUpdatedDto() {
+        // given
+        final String id = "test-id";
+        final EventDto inputDto = DataUtils.getEvent1DtoTransient();
+        final EventJpaEntity updatedEntity = DataUtils.getEventEntityPersisted();
+        final EventRedisEntity redisEntity = DataUtils.getEventRedisEntityTransient();
+        final EventDto expectedDto = DataUtils.getEvent1DtoTransient();
+
+        given(eventJpaRepository.existsById(id)).willReturn(true);
+        given(eventMapper.toJpaEntity(any(EventDto.class))).willReturn(updatedEntity);
+        given(eventJpaRepository.save(updatedEntity)).willReturn(updatedEntity);
+        given(eventMapper.toRedisEntity(any(EventDto.class))).willReturn(redisEntity);
+        given(eventMapper.toDto(updatedEntity)).willReturn(expectedDto);
+
+        // when
+        final EventDto result = eventService.update(id, inputDto);
+
+        // then
+        assertThat(result).isNotNull();
+        assertThat(result.id()).isEqualTo(expectedDto.id());
+        assertThat(result.title()).isEqualTo(expectedDto.title());
+        assertThat(result.description()).isEqualTo(expectedDto.description());
+
+        then(eventJpaRepository).should(times(1)).existsById(id);
+        then(eventJpaRepository).should(times(1)).save(updatedEntity);
+        then(eventRedisRepository).should(times(1)).save(redisEntity);
+        then(eventMapper).should(times(1)).toDto(updatedEntity);
+    }
+
+    @Test
+    @DisplayName("Test update event functionality - event not found")
+    void givenNonExistingEvent_whenUpdate_thenThrowEntityNotFoundException() {
+        // given
+        final String id = "non-existing-id";
+        final EventDto inputDto = DataUtils.getEvent1DtoTransient();
+
+        given(eventJpaRepository.existsById(id)).willReturn(false);
+
+        // when / then
+        assertThatThrownBy(() -> eventService.update(id, inputDto))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessageContaining("The event not found");
+
+        then(eventJpaRepository).should(times(1)).existsById(id);
+        then(eventJpaRepository).should(never()).save(any());
+        then(eventRedisRepository).should(never()).save(any());
+        then(eventMapper).should(never()).toJpaEntity(any());
+    }
+
+    @Test
+    @DisplayName("Test delete event functionality - success")
+    void givenExistingEvent_whenDelete_thenDeleteFromJpaAndRedis() {
+        // given
+        final String id = "test-id";
+
+        given(eventJpaRepository.existsById(id)).willReturn(true);
+        willDoNothing().given(eventRedisRepository).deleteById(id);
+        willDoNothing().given(eventJpaRepository).deleteById(id);
+
+        // when
+        eventService.delete(id);
+
+        // then
+        then(eventJpaRepository).should(times(1)).existsById(id);
+        then(eventRedisRepository).should(times(1)).deleteById(id);
+        then(eventJpaRepository).should(times(1)).deleteById(id);
+    }
+
+    @Test
+    @DisplayName("Test delete event functionality - event not found")
+    void givenNonExistingEvent_whenDelete_thenThrowEntityNotFoundException() {
+        // given
+        final String id = "non-existing-id";
+
+        given(eventJpaRepository.existsById(id)).willReturn(false);
+
+        // when
+        assertThatThrownBy(() -> eventService.delete(id))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessageContaining("The event not found");
+
+        // then
+        then(eventJpaRepository).should(times(1)).existsById(id);
+        then(eventRedisRepository).should(never()).deleteById(any());
+        then(eventJpaRepository).should(never()).deleteById(any());
     }
 
     @Test
