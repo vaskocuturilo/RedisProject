@@ -88,7 +88,9 @@ func main() {
 	mux.HandleFunc("PUT /events/{id}", ctrl.Update)
 	mux.HandleFunc("DELETE /events/{id}", ctrl.Delete)
 
-	wrappedMux := middleware.Logging(mux)
+	limiter := middleware.RateLimiter(redisClient, 10, time.Second)
+
+	wrappedMux := limiter(middleware.Logging(mux))
 
 	srv := http.Server{Addr: net.JoinHostPort(cfg.Server.Host, cfg.Server.Port), Handler: wrappedMux}
 
