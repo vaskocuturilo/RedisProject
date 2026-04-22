@@ -18,12 +18,30 @@ public class DataUtils {
                 .build();
     }
 
-    public static EventJpaEntity getEventEntityPersisted() {
+    public static EventJpaEntity getEvent1EntityPersisted() {
         return EventJpaEntity
                 .builder()
                 .id(UUID.randomUUID().toString())
-                .title("Saved Title")
-                .description("Saved Description")
+                .title("Title 1")
+                .description("Description 1")
+                .build();
+    }
+
+    public static EventJpaEntity getEvent2EntityPersisted() {
+        return EventJpaEntity
+                .builder()
+                .id(UUID.randomUUID().toString())
+                .title("Title 2")
+                .description("Description 2")
+                .build();
+    }
+
+    public static EventJpaEntity getEvent3EntityPersisted() {
+        return EventJpaEntity
+                .builder()
+                .id(UUID.randomUUID().toString())
+                .title("Title 3")
+                .description("Description 3")
                 .build();
     }
 

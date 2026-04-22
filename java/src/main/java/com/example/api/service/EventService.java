@@ -34,7 +34,7 @@ public class EventService {
 
         eventRedisRepository.save(eventMapper.toRedisEntity(savedDto));
 
-        log.info("Event created successfully id={}", savedEntity.getId());
+        log.debug("Event created successfully id={}", savedEntity.getId());
 
         return savedDto;
     }
@@ -45,7 +45,7 @@ public class EventService {
         return eventRedisRepository
                 .findById(id)
                 .map(cached -> {
-                    log.info("Cache hit for Event id= {}", id);
+                    log.debug("Cache hit for Event id= {}", id);
 
                     return eventMapper.toDto(cached);
                 }).orElseGet(() ->
@@ -53,26 +53,24 @@ public class EventService {
                                 .map(entity -> {
                                     final EventDto dto = eventMapper.toDto(entity);
                                     eventRedisRepository.save(eventMapper.toRedisEntity(dto));
-                                    log.info("Event id = {} cached after loading from Postgres", id);
+                                    log.debug("Event id = {} cached after loading from Postgres", id);
                                     return dto;
                                 }).orElseThrow(() -> new EntityNotFoundException("Event is not found with id = %s".formatted(id))));
     }
 
     public List<EventDto> getAll() {
-        List<EventRedisEntity> cachedEvents = (List<EventRedisEntity>) eventRedisRepository.findAll();
+        List<EventRedisEntity> cachedEvents = new ArrayList<>();
+
+        eventRedisRepository.findAll().forEach(cachedEvents::add);
 
         if (!cachedEvents.isEmpty()) {
-            log.info("Cache hit for all Events, count={}", cachedEvents.size());
+            log.debug("Cache hit for all Events, count={}", cachedEvents.size());
             return cachedEvents.stream().map(eventMapper::toDto).toList();
         }
 
-        log.info("Cache miss for all Events, loading from Postgres");
+        log.debug("Cache miss for all Events, loading from Postgres");
 
         List<EventJpaEntity> entities = eventJpaRepository.findAll();
-
-        if (entities.isEmpty()) {
-            return Collections.emptyList();
-        }
 
         List<EventDto> dtos = entities.stream()
                 .map(eventMapper::toDto)
@@ -84,14 +82,14 @@ public class EventService {
 
         eventRedisRepository.saveAll(redisEntities);
 
-        log.info("All Events cached after loading from Postgres, count={}", redisEntities.size());
+        log.debug("All Events cached after loading from Postgres, count={}", redisEntities.size());
 
         return dtos;
 
     }
 
     public EventDto update(final String id, final EventDto dto) {
-        log.info("Updating  Event id = {} in Postgres and Redis", id);
+        log.debug("Updating  Event id = {} in Postgres and Redis", id);
 
         if (!eventJpaRepository.existsById(id)) {
             throw new EntityNotFoundException("The event not found");
@@ -99,15 +97,18 @@ public class EventService {
 
         final EventDto eventDto = new EventDto(id, dto.title(), dto.description());
 
+
         final EventJpaEntity updatedEntity = eventJpaRepository.save(eventMapper.toJpaEntity(eventDto));
 
-        eventRedisRepository.save(eventMapper.toRedisEntity(eventDto));
+        final EventDto updatedDto = eventMapper.toDto(updatedEntity);
 
-        return eventMapper.toDto(updatedEntity);
+        eventRedisRepository.save(eventMapper.toRedisEntity(updatedDto));
+
+        return updatedDto;
     }
 
     public void delete(String id) {
-        log.info("Deleting  Event id = {} in Postgres and Redis", id);
+        log.debug("Deleting  Event id = {} in Postgres and Redis", id);
 
         if (!eventJpaRepository.existsById(id)) {
             throw new EntityNotFoundException("The event not found");

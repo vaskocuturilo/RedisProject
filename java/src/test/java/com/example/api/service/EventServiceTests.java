@@ -46,7 +46,7 @@ class EventServiceTests {
         final EventDto inputDto = DataUtils.getEvent1DtoTransient();
 
         final EventJpaEntity jpaEntity = DataUtils.getEventEntityTransient();
-        final EventJpaEntity savedEntity = DataUtils.getEventEntityPersisted();
+        final EventJpaEntity savedEntity = DataUtils.getEvent1EntityPersisted();
         final EventRedisEntity redisEntity = DataUtils.getEventRedisEntityTransient();
         final EventDto expectedDto = DataUtils.getEvent1DtoTransient();
 
@@ -99,7 +99,7 @@ class EventServiceTests {
     void givenNoCachedEvent_whenGet_thenReturnFromJpaAndCache() {
         // given
         final String id = "test-id";
-        final EventJpaEntity jpaEntity = DataUtils.getEventEntityPersisted();
+        final EventJpaEntity jpaEntity = DataUtils.getEvent1EntityPersisted();
         final EventDto expectedDto = DataUtils.getEvent1DtoTransient();
         final EventRedisEntity redisEntity = DataUtils.getEventRedisEntityTransient();
 
@@ -149,7 +149,7 @@ class EventServiceTests {
         // given
         final String id = "test-id";
         final EventDto inputDto = DataUtils.getEvent1DtoTransient();
-        final EventJpaEntity updatedEntity = DataUtils.getEventEntityPersisted();
+        final EventJpaEntity updatedEntity = DataUtils.getEvent1EntityPersisted();
         final EventRedisEntity redisEntity = DataUtils.getEventRedisEntityTransient();
         final EventDto expectedDto = DataUtils.getEvent1DtoTransient();
 
