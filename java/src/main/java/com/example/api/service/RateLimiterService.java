@@ -21,6 +21,11 @@ public class RateLimiterService {
                     local count = redis.call('INCR', KEYS[1])
                     if count == 1 then
                         redis.call('EXPIRE', KEYS[1], ARGV[1])
+                    else
+                        -- Ensure TTL is always set even if first call missed it
+                        if redis.call('TTL', KEYS[1]) == -1 then
+                            redis.call('EXPIRE', KEYS[1], ARGV[1])
+                        end
                     end
                     return count
                     """,

@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 public record ErrorResponseDto
         (
                 String error,
-                int errorCode,
+                int status,
                 String message,
                 LocalDateTime timestamp
         ) {

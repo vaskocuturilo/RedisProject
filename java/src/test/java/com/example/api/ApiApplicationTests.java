@@ -1,5 +1,6 @@
 package com.example.api;
 
+import com.example.api.it.AbstractRestControllerBaseTest;
 import com.example.api.rest.EventControllerV1;
 import com.example.api.service.EventService;
 import org.junit.jupiter.api.Test;
@@ -11,7 +12,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 @ActiveProfiles("test")
 @SpringBootTest
-class ApiApplicationTests {
+class ApiApplicationTests extends AbstractRestControllerBaseTest {
 
     @Autowired
     private EventControllerV1 eventControllerV1;

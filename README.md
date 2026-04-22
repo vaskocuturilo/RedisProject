@@ -1,4 +1,4 @@
-##    
+##     
 
 The demo project for Redis working with Golang and Java.
 
@@ -6,7 +6,7 @@ The demo project for Redis working with Golang and Java.
 
 - Create a REST API event service (create/put/get/get all/delete events and save to Redis).
 - Add Cache-Aside.
-- Add Rate Limiter. 
+- Add Rate Limiter.
 - Add Distributed Lock.
 - Add Redis.
 - Add Redis UI.
@@ -23,7 +23,7 @@ You will need the following technologies available to try it out:
 * Golang 1.25+
 * Redis 7.4+
 * Redis Insight (Redis UI)
-* Docker 
+* Docker
 * Docker compose
 * IDE of your choice
 
@@ -31,6 +31,10 @@ You will need the following technologies available to try it out:
 
 ``` ./gradlew bootRun ```
 
+``` docker compose -f "docker-compose-java.yml" up --detach ```
+
 ### How to run via Golang.
 
 ``` go run .```
+
+``` docker compose -f "docker-compose-golang.yml" up --detach ```
