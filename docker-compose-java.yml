@@ -135,7 +135,7 @@ services:
       context: ./java
       dockerfile: Dockerfile
     ports:
-      - "8091:8091"
+      - "${SERVER_PORT}:${SERVER_PORT}"
     environment:
       SERVER_PORT: ${SERVER_PORT}
       POSTGRES_USER: ${POSTGRES_USER}

@@ -51,7 +51,7 @@ func Load() *Config {
 			Password: os.Getenv("REDIS_PASSWORD"),
 		},
 		Server: ServerConfig{
-			Host: getEnv("SERVER_HOST", "localhost"),
+			Host: getEnv("SERVER_HOST", "0.0.0.0"),
 			Port: getEnv("SERVER_PORT", "8080"),
 			TTL:  time.Minute * 10,
 		},
