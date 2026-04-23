@@ -284,12 +284,14 @@ func TestEventService_Update_TableDriven(t *testing.T) {
 	for _, tc := range tests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			repoCalled := false
 			// Arrange
 			mockRepo := &MockRepository{
 				UpdateFunc: func(ctx context.Context, event *domain.Event) error {
 					if event.ID != "1" {
 						t.Errorf("Expected id '1', got '%s'", event.ID)
 					}
+					repoCalled = true
 					return tc.wantResponse
 				},
 			}
@@ -308,6 +310,14 @@ func TestEventService_Update_TableDriven(t *testing.T) {
 			// Assert
 			if !errors.Is(err, tc.wantErr) {
 				t.Errorf("Expected error %v, but got %v", tc.wantErr, err)
+			}
+
+			if tc.mockLockErr != nil && repoCalled {
+				t.Error("Repository was called even though lock was not acquired!")
+			}
+
+			if tc.mockLockErr == nil && tc.name == "Success" && !repoCalled {
+				t.Error("Repository was NOT called during successful lock acquisition")
 			}
 		})
 	}
