@@ -19,6 +19,7 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -89,6 +90,7 @@ func main() {
 	mux.HandleFunc("GET /events", ctrl.GetAll)
 	mux.HandleFunc("PUT /events/{id}", ctrl.Update)
 	mux.HandleFunc("DELETE /events/{id}", ctrl.Delete)
+	mux.Handle("GET /metrics", promhttp.Handler())
 
 	limiter := middleware.RateLimiter(redisClient, 10, time.Second)
 

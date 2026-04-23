@@ -38,6 +38,18 @@
         { "expr": "sum(rate(pg_stat_database_tup_deleted[1m]))", "legendFormat": "deleted", "refId": "E" }
       ],
       "gridPos": { "x": 12, "y": 6, "w": 12, "h": 8 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Rate Limit Hits (Blocked Requests)",
+      "targets": [
+        {
+          "expr": "sum(rate(http_ratelimit_exceeded_total[1m])) by (method, path)",
+          "legendFormat": "{{method}} {{path}}",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "x": 0, "y": 14, "w": 24, "h": 8 }
     }
   ]
 }
