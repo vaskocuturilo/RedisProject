@@ -4,8 +4,29 @@ import (
 	"context"
 	"errors"
 	"golang/domain"
+	"golang/repository"
 	"testing"
+	"time"
 )
+
+type MockLocker struct {
+	LockFunc   func(ctx context.Context, resource string, ttl time.Duration) (string, error)
+	UnlockFunc func(ctx context.Context, resource string, lockValue string) error
+}
+
+func (m *MockLocker) Lock(ctx context.Context, res string, ttl time.Duration) (string, error) {
+	if m.LockFunc != nil {
+		return m.LockFunc(ctx, res, ttl)
+	}
+	return "default-lock-value", nil
+}
+
+func (m *MockLocker) Unlock(ctx context.Context, res string, val string) error {
+	if m.UnlockFunc != nil {
+		return m.UnlockFunc(ctx, res, val)
+	}
+	return nil
+}
 
 type MockRepository struct {
 	CreateFunc func(ctx context.Context, event *domain.Event) error
@@ -57,6 +78,7 @@ func TestEventService_Create_TableDriven(t *testing.T) {
 		giveTitle    string
 		giveDesc     string
 		mockResponse error
+		mockLockErr  error
 		wantErr      error
 	}
 
@@ -66,6 +88,7 @@ func TestEventService_Create_TableDriven(t *testing.T) {
 			giveTitle:    "Valid Title",
 			giveDesc:     "Valid Description",
 			mockResponse: nil,
+			mockLockErr:  nil,
 			wantErr:      nil,
 		},
 		{
@@ -73,6 +96,7 @@ func TestEventService_Create_TableDriven(t *testing.T) {
 			giveTitle:    "",
 			giveDesc:     "Some desc",
 			mockResponse: nil,
+			mockLockErr:  nil,
 			wantErr:      domain.ErrTitleRequired,
 		},
 		{
@@ -80,6 +104,7 @@ func TestEventService_Create_TableDriven(t *testing.T) {
 			giveTitle:    "Duplicate",
 			giveDesc:     "Desc",
 			mockResponse: domain.ErrAlreadyExists,
+			mockLockErr:  nil,
 			wantErr:      domain.ErrAlreadyExists,
 		},
 	}
@@ -93,7 +118,13 @@ func TestEventService_Create_TableDriven(t *testing.T) {
 					return tc.mockResponse
 				},
 			}
-			serv := NewEventService(mockRepo)
+
+			mockLocker := &MockLocker{
+				LockFunc: func(ctx context.Context, res string, ttl time.Duration) (string, error) {
+					return "test-token", tc.mockLockErr
+				},
+			}
+			serv := NewEventService(mockRepo, mockLocker)
 			event := &domain.Event{Title: tc.giveTitle, Description: tc.giveDesc}
 
 			// Act
@@ -109,32 +140,35 @@ func TestEventService_Create_TableDriven(t *testing.T) {
 
 func TestEventService_Get_TableDriven(t *testing.T) {
 	type testCase struct {
-		name       string
-		giveID     string
-		wantReturn *domain.Event
-		mockErr    error
-		wantEvent  *domain.Event
-		wantErr    error
+		name        string
+		giveID      string
+		wantReturn  *domain.Event
+		mockErr     error
+		mockLockErr error
+		wantEvent   *domain.Event
+		wantErr     error
 	}
 
 	event := domain.Event{Title: "Test", Description: "Test"}
 
 	tests := []testCase{
 		{
-			name:       "Success",
-			giveID:     "1",
-			wantReturn: &event,
-			mockErr:    nil,
-			wantEvent:  &event,
-			wantErr:    nil,
+			name:        "Success",
+			giveID:      "1",
+			wantReturn:  &event,
+			mockErr:     nil,
+			mockLockErr: nil,
+			wantEvent:   &event,
+			wantErr:     nil,
 		},
 		{
-			name:       "Not Found",
-			giveID:     "2",
-			wantReturn: nil,
-			mockErr:    domain.ErrNotFound,
-			wantEvent:  nil,
-			wantErr:    domain.ErrNotFound,
+			name:        "Not Found",
+			giveID:      "2",
+			wantReturn:  nil,
+			mockErr:     domain.ErrNotFound,
+			mockLockErr: nil,
+			wantEvent:   nil,
+			wantErr:     domain.ErrNotFound,
 		},
 	}
 
@@ -150,7 +184,14 @@ func TestEventService_Get_TableDriven(t *testing.T) {
 					return tc.wantReturn, tc.mockErr
 				},
 			}
-			serv := NewEventService(mockRepo)
+
+			mockLocker := &MockLocker{
+				LockFunc: func(ctx context.Context, res string, ttl time.Duration) (string, error) {
+					return "test-token", tc.mockLockErr
+				},
+			}
+
+			serv := NewEventService(mockRepo, mockLocker)
 
 			// Act
 			result, err := serv.Get(context.Background(), tc.giveID)
@@ -184,8 +225,15 @@ func TestEventService_GetAll_Success(t *testing.T) {
 			return expectedEvents, nil
 		},
 	}
+
+	mockLocker := &MockLocker{
+		LockFunc: func(ctx context.Context, res string, ttl time.Duration) (string, error) {
+			return "test-token", nil
+		},
+	}
+
 	//Act
-	serv := NewEventService(mockRepo)
+	serv := NewEventService(mockRepo, mockLocker)
 
 	ctx := context.Background()
 
@@ -205,6 +253,7 @@ func TestEventService_Update_TableDriven(t *testing.T) {
 	type testCase struct {
 		name         string
 		wantResponse error
+		mockLockErr  error
 		wantErr      error
 	}
 
@@ -214,28 +263,46 @@ func TestEventService_Update_TableDriven(t *testing.T) {
 		{
 			name:         "Success",
 			wantResponse: nil,
+			mockLockErr:  nil,
 			wantErr:      nil,
 		},
 		{
 			name:         "Not Found",
 			wantResponse: domain.ErrNotFound,
+			mockLockErr:  nil,
 			wantErr:      domain.ErrNotFound,
+		},
+
+		{
+			name:         "Resource Locked",
+			wantResponse: nil,
+			mockLockErr:  repository.ErrLockNotAcquired,
+			wantErr:      repository.ErrLockNotAcquired,
 		},
 	}
 
 	for _, tc := range tests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			repoCalled := false
 			// Arrange
 			mockRepo := &MockRepository{
 				UpdateFunc: func(ctx context.Context, event *domain.Event) error {
 					if event.ID != "1" {
 						t.Errorf("Expected id '1', got '%s'", event.ID)
 					}
+					repoCalled = true
 					return tc.wantResponse
 				},
 			}
-			serv := NewEventService(mockRepo)
+
+			mockLocker := &MockLocker{
+				LockFunc: func(ctx context.Context, res string, ttl time.Duration) (string, error) {
+					return "test-token", tc.mockLockErr
+				},
+			}
+
+			serv := NewEventService(mockRepo, mockLocker)
 
 			// Act
 			err := serv.Update(context.Background(), &event)
@@ -243,6 +310,14 @@ func TestEventService_Update_TableDriven(t *testing.T) {
 			// Assert
 			if !errors.Is(err, tc.wantErr) {
 				t.Errorf("Expected error %v, but got %v", tc.wantErr, err)
+			}
+
+			if tc.mockLockErr != nil && repoCalled {
+				t.Error("Repository was called even though lock was not acquired!")
+			}
+
+			if tc.mockLockErr == nil && tc.name == "Success" && !repoCalled {
+				t.Error("Repository was NOT called during successful lock acquisition")
 			}
 		})
 	}
@@ -253,6 +328,7 @@ func TestEventService_Delete_TableDriven(t *testing.T) {
 		name         string
 		giveID       string
 		wantResponse error
+		mockLockErr  error
 		wantErr      error
 	}
 
@@ -261,12 +337,14 @@ func TestEventService_Delete_TableDriven(t *testing.T) {
 			name:         "Success",
 			giveID:       "1",
 			wantResponse: nil,
+			mockLockErr:  nil,
 			wantErr:      nil,
 		},
 		{
 			name:         "Not Found",
 			giveID:       "1",
 			wantResponse: domain.ErrNotFound,
+			mockLockErr:  nil,
 			wantErr:      domain.ErrNotFound,
 		},
 	}
@@ -283,7 +361,14 @@ func TestEventService_Delete_TableDriven(t *testing.T) {
 					return tc.wantResponse
 				},
 			}
-			serv := NewEventService(mockRepo)
+
+			mockLocker := &MockLocker{
+				LockFunc: func(ctx context.Context, res string, ttl time.Duration) (string, error) {
+					return "test-token", tc.mockLockErr
+				},
+			}
+
+			serv := NewEventService(mockRepo, mockLocker)
 
 			// Act
 			err := serv.Delete(context.Background(), tc.giveID)

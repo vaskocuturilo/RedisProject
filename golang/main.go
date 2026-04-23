@@ -66,6 +66,8 @@ func main() {
 		DB:       0,
 	})
 
+	lockManager := repository.NewRedisLock(redisClient)
+
 	if err := redisClient.Ping(context.Background()).Err(); err != nil {
 		slog.Warn("WARNING: Redis is not reachable, working without cache.", "error", err)
 	} else {
@@ -76,7 +78,7 @@ func main() {
 
 	repo := repository.NewCachedEventRepository(pgRepo, redisClient, cfg.Server.TTL)
 
-	serv := service.NewEventService(repo)
+	serv := service.NewEventService(repo, lockManager)
 
 	ctrl := controller.NewEventController(serv)
 

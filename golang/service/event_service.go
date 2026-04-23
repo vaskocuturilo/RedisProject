@@ -2,16 +2,20 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"golang/domain"
 	"golang/repository"
+	"log/slog"
+	"time"
 )
 
 type EventService struct {
-	repo repository.EventRepository
+	repo   repository.EventRepository
+	locker repository.Locker
 }
 
-func NewEventService(repo repository.EventRepository) *EventService {
-	return &EventService{repo: repo}
+func NewEventService(repo repository.EventRepository, locker repository.Locker) *EventService {
+	return &EventService{repo: repo, locker: locker}
 }
 
 func (s *EventService) Create(ctx context.Context, event *domain.Event) error {
@@ -30,6 +34,20 @@ func (s *EventService) GetAll(ctx context.Context) ([]*domain.Event, error) {
 }
 
 func (s *EventService) Update(ctx context.Context, event *domain.Event) error {
+	lockKey := "event_update_" + event.ID
+
+	lockValue, err := s.locker.Lock(ctx, lockKey, 5*time.Second)
+
+	if err != nil {
+		return fmt.Errorf("resource is locked: %w", err)
+	}
+
+	defer func() {
+		if unlockErr := s.locker.Unlock(ctx, lockKey, lockValue); unlockErr != nil {
+			slog.Error("Failed to release lock", "key", lockKey, "error", unlockErr)
+		}
+	}()
+
 	return s.repo.Update(ctx, event)
 }
 
