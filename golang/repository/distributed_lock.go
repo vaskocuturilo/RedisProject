@@ -20,17 +20,21 @@ func NewRedisLock(client *redis.Client) *RedisLock {
 }
 
 var unlockScript = redis.NewScript(`
-    if redis.call('SET', KEYS[1], ARGV[1], 'NX', 'PX', ARGV[2]) then
-                        return 1
-                    else
-                        return 0
-                    end
+    if redis.call("GET", KEYS[1]) == ARGV[1] then
+
+    return redis.call("DEL", KEYS[1])
+
+else
+
+    return 0
+
+end
 `)
 
 func (l *RedisLock) Lock(ctx context.Context, resource string, ttl time.Duration) (string, error) {
 	lockValue := uuid.New().String()
 
-	success, err := l.client.SetXX(ctx, "lock:"+resource, lockValue, ttl).Result()
+	success, err := l.client.SetNX(ctx, "lock:"+resource, lockValue, ttl).Result()
 	if err != nil {
 		return "", err
 	}

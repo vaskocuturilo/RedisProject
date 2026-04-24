@@ -62,9 +62,9 @@ func (c *EventController) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.CanonicalHeaderKey("Content-Type")
-	w.WriteHeader(http.StatusCreated)
+	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Location", fmt.Sprintf("/events/%s", newEvent.ID))
+	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(newEvent)
 }
 
@@ -72,8 +72,6 @@ func (c *EventController) Get(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	idFromPath := r.PathValue("id")
-
-	err := uuid.Validate(idFromPath)
 
 	if err := uuid.Validate(idFromPath); err != nil {
 		slog.Info("Invalid ID", "error", err)
@@ -94,7 +92,7 @@ func (c *EventController) Get(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	http.CanonicalHeaderKey("Content-Type")
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
 	json.NewEncoder(w).Encode(result)
@@ -110,7 +108,7 @@ func (c *EventController) GetAll(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	http.CanonicalHeaderKey("Content-Type")
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
 	json.NewEncoder(w).Encode(result)
@@ -145,7 +143,7 @@ func (c *EventController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.CanonicalHeaderKey("Content-Type")
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
 	json.NewEncoder(w).Encode(updatedEvent)
@@ -176,6 +174,6 @@ func (c *EventController) Delete(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	http.CanonicalHeaderKey("Content-Type")
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusNoContent)
 }
