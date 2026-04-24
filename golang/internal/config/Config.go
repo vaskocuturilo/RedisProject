@@ -30,9 +30,12 @@ type RedisConfig struct {
 }
 
 type ServerConfig struct {
-	Host string
-	Port string
-	TTL  time.Duration
+	Host           string
+	Port           string
+	TTL            time.Duration
+	RequestTimeout time.Duration
+	RedisTimeout   time.Duration
+	DBTimeout      time.Duration
 }
 
 func Load() *Config {
@@ -51,9 +54,12 @@ func Load() *Config {
 			Password: os.Getenv("REDIS_PASSWORD"),
 		},
 		Server: ServerConfig{
-			Host: getEnv("SERVER_HOST", "0.0.0.0"),
-			Port: getEnv("SERVER_PORT", "8080"),
-			TTL:  time.Minute * 10,
+			Host:           getEnv("SERVER_HOST", "0.0.0.0"),
+			Port:           getEnv("SERVER_PORT", "8080"),
+			TTL:            time.Minute * 10,
+			DBTimeout:      time.Second * 5,
+			RedisTimeout:   time.Second * 5,
+			RequestTimeout: time.Second * 5,
 		},
 	}
 }

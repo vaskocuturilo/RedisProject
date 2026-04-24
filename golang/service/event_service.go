@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"golang/domain"
+	"golang/internal/config"
 	"golang/repository"
 	"log/slog"
-	"time"
 )
 
 type EventService struct {
@@ -34,9 +34,11 @@ func (s *EventService) GetAll(ctx context.Context) ([]*domain.Event, error) {
 }
 
 func (s *EventService) Update(ctx context.Context, event *domain.Event) error {
+	cfg := config.Load()
+
 	lockKey := "event_update_" + event.ID
 
-	lockValue, err := s.locker.Lock(ctx, lockKey, 5*time.Second)
+	lockValue, err := s.locker.Lock(ctx, lockKey, cfg.Server.RequestTimeout)
 
 	if err != nil {
 		return fmt.Errorf("resource is locked: %w", err)

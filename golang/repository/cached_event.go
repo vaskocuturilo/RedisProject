@@ -6,10 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"golang/domain"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	"golang.org/x/sync/singleflight"
 )
 
 const eventString = "event:%s"
@@ -17,6 +18,7 @@ const eventString = "event:%s"
 type CachedEventRepository struct {
 	repo  EventRepository
 	cache *redis.Client
+	group singleflight.Group
 	ttl   time.Duration
 }
 
@@ -37,7 +39,12 @@ func (c *CachedEventRepository) Create(ctx context.Context, event *domain.Event)
 		return nil
 	}
 
-	data, _ := json.Marshal(event)
+	data, err := json.Marshal(event)
+	if err != nil {
+
+		return err
+
+	}
 	key := fmt.Sprintf(eventString, event.ID)
 
 	c.cache.Set(ctx, key, data, c.ttl)
@@ -49,6 +56,7 @@ func (c *CachedEventRepository) Get(ctx context.Context, id string) (*domain.Eve
 	key := fmt.Sprintf(eventString, id)
 
 	val, err := c.cache.Get(ctx, key).Result()
+
 	if err == nil {
 		var event domain.Event
 		if err := json.Unmarshal([]byte(val), &event); err == nil {
@@ -57,18 +65,29 @@ func (c *CachedEventRepository) Get(ctx context.Context, id string) (*domain.Eve
 	}
 
 	if err != nil && !errors.Is(err, redis.Nil) {
-		log.Printf("Redis error for key %s: %v", key, err)
+		slog.Info("Redis error for key ", "key", "error", key, err)
 	}
 
-	event, err := c.repo.Get(ctx, id)
+	result, err, _ := c.group.Do(id, func() (interface{}, error) {
+		dbCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		event, err := c.repo.Get(dbCtx, id)
+		if err != nil {
+			return nil, err
+		}
+
+		data, _ := json.Marshal(event)
+		c.cache.Set(context.Background(), key, data, c.ttl)
+
+		return event, nil
+	})
+
 	if err != nil {
 		return nil, err
 	}
 
-	data, _ := json.Marshal(event)
-	c.cache.Set(ctx, key, data, c.ttl)
-
-	return event, nil
+	return result.(*domain.Event), nil
 }
 
 func (c *CachedEventRepository) GetAll(ctx context.Context) ([]*domain.Event, error) {
@@ -85,7 +104,7 @@ func (c *CachedEventRepository) Update(ctx context.Context, event *domain.Event)
 	}
 
 	if cacheErr := c.cache.Del(ctx, key).Err(); cacheErr != nil {
-		log.Printf("failed to update cache key %s: %v", key, cacheErr)
+		slog.Info("failed to update cache key", "key", "error", key, cacheErr)
 	}
 	return nil
 }
@@ -100,7 +119,7 @@ func (c *CachedEventRepository) Delete(ctx context.Context, id string) error {
 	}
 
 	if cacheErr := c.cache.Del(ctx, key).Err(); cacheErr != nil {
-		log.Printf("failed to delete cache key %s: %v", key, cacheErr)
+		slog.Info("failed to delete cache key", "key", "error", key, cacheErr)
 	}
 	return nil
 }

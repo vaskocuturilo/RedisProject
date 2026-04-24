@@ -24,7 +24,6 @@ import (
 )
 
 func main() {
-
 	cfg := config.Load()
 
 	var handler slog.Handler
@@ -44,10 +43,10 @@ func main() {
 		}
 	}(db)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.Server.DBTimeout)
 	defer cancel()
 
-	if err := db.Ping(); err != nil {
+	if err := db.PingContext(ctx); err != nil {
 		slog.Warn("Postgres is not ready: ", "error", err)
 	} else {
 		slog.Info("Postgres is ready")
@@ -62,14 +61,20 @@ func main() {
 	}
 
 	redisClient := redis.NewClient(&redis.Options{
-		Addr:     cfg.Redis.Addr,
-		Password: cfg.Redis.Password,
-		DB:       0,
+		Addr:         cfg.Redis.Addr,
+		Password:     cfg.Redis.Password,
+		DB:           0,
+		DialTimeout:  2 * time.Second,
+		ReadTimeout:  1 * time.Second,
+		WriteTimeout: 1 * time.Second,
 	})
 
 	lockManager := repository.NewRedisLock(redisClient)
 
-	if err := redisClient.Ping(context.Background()).Err(); err != nil {
+	ctx, cancel = context.WithTimeout(context.Background(), cfg.Server.RedisTimeout)
+	defer cancel()
+
+	if err := redisClient.Ping(ctx).Err(); err != nil {
 		slog.Warn("WARNING: Redis is not reachable, working without cache.", "error", err)
 	} else {
 		slog.Info("Successfully connected to Redis")
