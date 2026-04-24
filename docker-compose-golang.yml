@@ -159,8 +159,6 @@ services:
       options:
         max-size: "50m"
         max-file: "4"
-    labels:
-      - "com.centurylinklabs.watchtower.enable=true"
 
     depends_on:
       postgres:
