@@ -1,18 +1,21 @@
 package com.example.api.service;
 
 import com.example.api.dto.EventDto;
+import com.example.api.dto.PageResponse;
 import com.example.api.entity.EventJpaEntity;
-import com.example.api.entity.EventRedisEntity;
 import com.example.api.mapper.EventMapper;
 import com.example.api.repository.EventJpaRepository;
 import com.example.api.repository.EventRedisRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
-import java.util.*;
+import java.util.UUID;
 
 @Service
 @Slf4j
@@ -58,34 +61,17 @@ public class EventService {
                                 }).orElseThrow(() -> new EntityNotFoundException("Event is not found with id = %s".formatted(id))));
     }
 
-    public List<EventDto> getAll() {
-        List<EventRedisEntity> cachedEvents = new ArrayList<>();
+    public PageResponse<EventDto> getAll(final Pageable pageable) {
+        final Page<EventJpaEntity> page = eventJpaRepository.findAll(pageable);
 
-        eventRedisRepository.findAll().forEach(cachedEvents::add);
+        final Page<EventDto> dtoPage = page.map(eventMapper::toDto);
 
-        if (!cachedEvents.isEmpty()) {
-            log.debug("Cache hit for all Events, count={}", cachedEvents.size());
-            return cachedEvents.stream().map(eventMapper::toDto).toList();
-        }
-
-        log.debug("Cache miss for all Events, loading from Postgres");
-
-        List<EventJpaEntity> entities = eventJpaRepository.findAll();
-
-        List<EventDto> dtos = entities.stream()
-                .map(eventMapper::toDto)
-                .toList();
-
-        List<EventRedisEntity> redisEntities = dtos.stream()
-                .map(eventMapper::toRedisEntity)
-                .toList();
-
-        eventRedisRepository.saveAll(redisEntities);
-
-        log.debug("All Events cached after loading from Postgres, count={}", redisEntities.size());
-
-        return dtos;
-
+        return new PageResponse<>
+                (dtoPage.getContent(),
+                        dtoPage.getNumber(),
+                        dtoPage.getSize(),
+                        dtoPage.getTotalElements(),
+                        dtoPage.getTotalPages(), resolveSortBy(pageable), resolveDirection(pageable));
     }
 
     public EventDto update(final String id, final EventDto dto) {
@@ -116,5 +102,21 @@ public class EventService {
 
         eventRedisRepository.deleteById(id);
         eventJpaRepository.deleteById(id);
+    }
+
+    private String resolveSortBy(Pageable pageable) {
+        return pageable.getSort().stream()
+                .findFirst()
+                .map(Sort.Order::getProperty)
+                .orElse("unsorted");
+
+    }
+
+    private String resolveDirection(Pageable pageable) {
+        return pageable.getSort().stream()
+                .findFirst()
+                .map(order -> order.getDirection().name())
+                .orElse("ASC");
+
     }
 }
