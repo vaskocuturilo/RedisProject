@@ -1,6 +1,7 @@
 package com.example.api.rest;
 
 import com.example.api.dto.EventDto;
+import com.example.api.dto.PageResponse;
 import com.example.api.service.EventService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.BDDMockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -167,12 +169,20 @@ class EventControllerV1Test {
     @DisplayName("Test get all events functionality")
     void givenThreeEvents_whenGetByAll_thenSuccessResponse() throws Exception {
         //given
-        BDDMockito.given(eventService.getAll())
-                .willReturn(
-                        List.of(
-                                DataUtils.getEvent1DtoTransient(),
-                                DataUtils.getEvent2DtoTransient(),
-                                DataUtils.getEvent3DtoTransient()));
+        PageResponse<EventDto> response = new PageResponse<>(
+                List.of(
+                        DataUtils.getEvent1DtoTransient(),
+                        DataUtils.getEvent2DtoTransient(),
+                        DataUtils.getEvent3DtoTransient()),
+                0,
+                10,
+                3,
+                1,
+                "title",
+                "ASC");
+
+        BDDMockito.given(eventService.getAll(any(Pageable.class)))
+                .willReturn(response);
 
         //when
         final ResultActions result = mockMvc.perform(get(ENDPOINT_PATH)
@@ -180,11 +190,18 @@ class EventControllerV1Test {
 
         //then
         result.andDo(MockMvcResultHandlers.print())
-                .andExpect(MockMvcResultMatchers.status().isOk())
-                .andExpect(jsonPath("$[0].id").isNotEmpty())
-                .andExpect(jsonPath("$[0].title").isNotEmpty())
-                .andExpect(jsonPath("$[0].description").isNotEmpty())
-                .andExpect(jsonPath("$[*]", hasSize(3)));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(3)))
+                .andExpect(jsonPath("$.content[0].id").isNotEmpty())
+                .andExpect(jsonPath("$.content[0].title").isNotEmpty())
+                .andExpect(jsonPath("$.content[0].description").isNotEmpty())
+
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(10))
+                .andExpect(jsonPath("$.totalElements").value(3))
+                .andExpect(jsonPath("$.totalPages").value(1))
+                .andExpect(jsonPath("$.sortBy").value("title"))
+                .andExpect(jsonPath("$.direction").value("ASC"));
     }
 
     @Test

@@ -190,13 +190,14 @@ class ItEventControllerV1Test extends AbstractRestControllerBaseTest {
         //then
         result.andDo(MockMvcResultHandlers.print())
                 .andExpect(MockMvcResultMatchers.status().isOk())
-                .andExpect(jsonPath("$[0].id").isNotEmpty())
-                .andExpect(jsonPath("$[0].title").isNotEmpty())
-                .andExpect(jsonPath("$[0].description").isNotEmpty())
-                .andExpect(jsonPath("$[*]", hasSize(3)))
-                .andExpect(jsonPath("$[0].title", CoreMatchers.is("Title 1")))
-                .andExpect(jsonPath("$[1].title", CoreMatchers.is("Title 2")))
-                .andExpect(jsonPath("$[2].title", CoreMatchers.is("Title 3")));
+                .andExpect(jsonPath("$[*]", hasSize(7)))
+                .andExpect(jsonPath("$.content[0].id").isNotEmpty())
+                .andExpect(jsonPath("$.content[0].title").isNotEmpty())
+                .andExpect(jsonPath("$.content[0].description").isNotEmpty())
+
+                .andExpect(jsonPath("$.content[0].title", CoreMatchers.is("Title 1")))
+                .andExpect(jsonPath("$.content[1].title", CoreMatchers.is("Title 2")))
+                .andExpect(jsonPath("$.content[2].title", CoreMatchers.is("Title 3")));
     }
 
     @Test
