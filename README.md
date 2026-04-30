@@ -1,8 +1,8 @@
 ##     
 
-The demo project for Redis working with Golang and Java.
+The demo project for Redis is implemented with Golang and Java.
 
-### This project was created to demonstrate how to work with the Redis.
+### This project was created to demonstrate how to work with Redis.
 
 - Create a REST API event service (create/put/get/get all/delete events and save to Redis).
 - Add Cache-Aside.
